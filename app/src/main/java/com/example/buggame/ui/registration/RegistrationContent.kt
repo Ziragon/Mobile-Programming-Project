@@ -47,6 +47,7 @@ fun RegistrationContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .safeDrawingPadding()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -171,7 +172,8 @@ private fun ResultDialog(
             shape = RoundedCornerShape(24.dp),
             tonalElevation = 8.dp,
             shadowElevation = 8.dp,
-            color = MaterialTheme.colorScheme.surface
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.safeDrawingPadding()
         ) {
             Column(
                 modifier = Modifier
