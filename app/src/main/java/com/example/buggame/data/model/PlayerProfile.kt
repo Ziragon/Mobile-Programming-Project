@@ -7,10 +7,17 @@ enum class Gender(val title: String) {
     FEMALE("Женский")
 }
 
+enum class Course(val number: Int, val title: String) {
+    FIRST(1, "1 Курс"),
+    SECOND(2, "2 Курс"),
+    THIRD(3, "3 Курс"),
+    FOURTH(4, "4 Курс");
+}
+
 data class PlayerProfile(
     val fullName: String,
     val gender: Gender,
-    val course: Int,
+    val course: Course,
     val difficulty: Int,
     val birthDate: LocalDate,
     val zodiacSign: ZodiacSign
