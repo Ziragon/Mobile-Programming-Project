@@ -18,6 +18,7 @@ fun RegistrationScreen(
         onCourseChange = viewModel::onCourseChanged,
         onDifficultyChange = viewModel::onDifficultyChanged,
         onDateChange = viewModel::onBirthDateChanged,
-        onSubmitClick = viewModel::onSubmitClicked
+        onSubmitClick = viewModel::onSubmitClicked,
+        onResultDialogDismiss = viewModel::onResultDialogDismissed
     )
 }

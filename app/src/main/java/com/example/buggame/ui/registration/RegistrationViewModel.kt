@@ -36,6 +36,10 @@ class RegistrationViewModel : ViewModel() {
         _uiState.update { it.copy(birthDate = date) }
     }
 
+    fun onResultDialogDismissed() {
+        _uiState.update { it.copy(isResultDialogVisible = false) }
+    }
+
     fun onSubmitClicked() {
         val currentState = _uiState.value
         val zodiac = ZodiacCalculator.getZodiacSign(currentState.birthDate)
@@ -61,7 +65,8 @@ class RegistrationViewModel : ViewModel() {
         _uiState.update {
             it.copy(
                 submittedProfile = profile,
-                summaryText = formattedSummary
+                summaryText = formattedSummary,
+                isResultDialogVisible = true
             )
         }
     }

@@ -5,6 +5,7 @@ import android.widget.CalendarView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -20,16 +21,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.buggame.R
 import com.example.buggame.data.model.Course
 import com.example.buggame.data.model.Gender
+import com.example.buggame.data.model.PlayerProfile
 import com.example.buggame.data.model.ZodiacSign
 import java.time.LocalDate
 
-/**
- * Чистая вёрстка экрана регистрации.
- * Ничего не знает о ViewModel — только принимает state и коллбэки.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegistrationContent(
@@ -39,7 +39,8 @@ fun RegistrationContent(
     onCourseChange: (Course) -> Unit,
     onDifficultyChange: (Int) -> Unit,
     onDateChange: (LocalDate) -> Unit,
-    onSubmitClick: () -> Unit
+    onSubmitClick: () -> Unit,
+    onResultDialogDismiss: () -> Unit
 ) {
     var courseMenuExpanded by remember { mutableStateOf(false) }
 
@@ -57,7 +58,6 @@ fun RegistrationContent(
             fontWeight = FontWeight.Bold
         )
 
-        // ---------- ФИО ----------
         OutlinedTextField(
             value = state.fullName,
             onValueChange = onNameChange,
@@ -66,7 +66,6 @@ fun RegistrationContent(
             singleLine = true
         )
 
-        // ---------- Пол (RadioButton) ----------
         Column {
             Text(text = "Пол", style = MaterialTheme.typography.labelLarge)
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -80,7 +79,6 @@ fun RegistrationContent(
             }
         }
 
-        // ---------- Курс (выпадающий список) ----------
         ExposedDropdownMenuBox(
             expanded = courseMenuExpanded,
             onExpandedChange = { courseMenuExpanded = !courseMenuExpanded }
@@ -111,7 +109,6 @@ fun RegistrationContent(
             }
         }
 
-        // ---------- Уровень сложности (SeekBar → Slider) ----------
         Column {
             Text(
                 text = "Уровень сложности: ${state.difficulty}",
@@ -125,7 +122,6 @@ fun RegistrationContent(
             )
         }
 
-        // ---------- Дата рождения (CalendarView) ----------
         Column {
             Text(text = "Дата рождения", style = MaterialTheme.typography.labelLarge)
             AndroidView(
@@ -137,43 +133,115 @@ fun RegistrationContent(
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(360.dp)
             )
         }
 
-        // ---------- Кнопка регистрации ----------
         Button(
             onClick = onSubmitClick,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Зарегистрировать")
         }
+    }
 
-        HorizontalDivider()
+    if (state.isResultDialogVisible && state.submittedProfile != null) {
+        ResultDialog(
+            profile = state.submittedProfile,
+            onDismiss = onResultDialogDismiss
+        )
+    }
+}
 
-        // ---------- Результат (TextView) ----------
-        if (state.summaryText.isNotBlank()) {
-            Text(
-                text = state.summaryText,
-                style = MaterialTheme.typography.bodyLarge
-            )
-        }
+@Composable
+private fun ResultDialog(
+    profile: PlayerProfile,
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true
+        )
+    ) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            tonalElevation = 8.dp,
+            shadowElevation = 8.dp,
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
 
-        // ---------- Знак зодиака (ImageBox) ----------
-        state.submittedProfile?.let { profile ->
-            Image(
-                painter = painterResource(id = zodiacIconRes(profile.zodiacSign)),
-                contentDescription = profile.zodiacSign.title,
-                modifier = Modifier.size(96.dp)
-            )
+                Text(
+                    text = "Регистрация завершена",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        ResultRow(label = "Игрок", value = profile.fullName)
+                        ResultRow(label = "Пол", value = profile.gender.title)
+                        ResultRow(label = "Курс", value = profile.course.title)
+                        ResultRow(label = "Сложность", value = profile.difficulty.toString())
+                        ResultRow(label = "Дата рождения", value = profile.birthDate.toString())
+                        ResultRow(label = "Знак зодиака", value = profile.zodiacSign.title)
+                    }
+
+                    Image(
+                        painter = painterResource(id = zodiacIconRes(profile.zodiacSign)),
+                        contentDescription = profile.zodiacSign.title,
+                        modifier = Modifier.size(96.dp)
+                    )
+                }
+
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .widthIn(min = 160.dp)
+                ) {
+                    Text("Начать")
+                }
+            }
         }
     }
 }
 
-/**
- * Маппинг знака зодиака на drawable-иконку.
- * Замени имена ресурсов на свои реальные файлы в res/drawable.
- */
+@Composable
+private fun ResultRow(label: String, value: String) {
+    Column {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
 private fun zodiacIconRes(sign: ZodiacSign): Int = when (sign) {
     ZodiacSign.ARIES -> R.drawable.zodiac_aries
     ZodiacSign.TAURUS -> R.drawable.zodiac_taurus

@@ -13,5 +13,6 @@ data class RegistrationState(
     val birthDate: LocalDate = LocalDate.now(),
 
     val submittedProfile: PlayerProfile? = null,
-    val summaryText: String = ""
+    val summaryText: String = "",
+    val isResultDialogVisible: Boolean = false
 )
