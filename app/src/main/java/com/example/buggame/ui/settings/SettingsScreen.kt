@@ -17,6 +17,7 @@ fun SettingsScreen(
         onMaxBugsChange = viewModel::onMaxBugsChanged,
         onBonusIntervalChange = viewModel::onBonusIntervalChanged,
         onRoundDurationChange = viewModel::onRoundDurationChanged,
-        onSaveClick = viewModel::onSaveClicked
+        onSaveClick = viewModel::onSaveClicked,
+        onSaveSnackbarDismissed = viewModel::onSaveSnackbarDismissed
     )
 }

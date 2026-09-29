@@ -1,6 +1,7 @@
 package com.example.buggame.ui.authors
 
 import androidx.lifecycle.ViewModel
+import com.example.buggame.R
 import com.example.buggame.data.model.Author
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,13 +22,13 @@ class AuthorsViewModel : ViewModel() {
                 id = 1,
                 fullName = "Евгений Кривенышев",
                 role = "Бизнес-логика и архитектура",
-                photoResId = null // TODO не забудь реальное фото поставить
+                photoResId = R.drawable.author_krivenyshev
             ),
             Author(
                 id = 2,
-                fullName = "Гей Давидыч",
+                fullName = "Никита Шушаков",
                 role = "Фронтенд и дизайн",
-                photoResId = null
+                photoResId = R.drawable.author_shushakov
             )
         )
 

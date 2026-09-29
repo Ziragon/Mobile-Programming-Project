@@ -12,6 +12,7 @@ fun RulesScreen(
     val state by viewModel.uiState.collectAsState()
 
     RulesContent(
-        state = state
+        state = state,
+        onRetryClick = { viewModel.loadRules() }
     )
 }
