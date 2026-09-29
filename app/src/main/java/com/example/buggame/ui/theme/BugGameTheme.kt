@@ -27,7 +27,9 @@ fun BugGameTheme(content: @Composable () -> Unit) {
         outline = colorResource(R.color.graphite_outline),
 
         error = colorResource(R.color.error_soft),
-        onError = colorResource(R.color.black)
+        onError = colorResource(R.color.black),
+
+        surfaceTint = colorResource(R.color.graphite_outline)
     )
 
     MaterialTheme(

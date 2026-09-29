@@ -218,9 +218,9 @@ private fun ResultDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(24.dp),
-            tonalElevation = 8.dp,
+            tonalElevation = 0.dp,
             shadowElevation = 8.dp,
-            color = MaterialTheme.colorScheme.surface,
+            color = MaterialTheme.colorScheme.surfaceVariant,
             modifier = Modifier.safeDrawingPadding()
         ) {
             Column(
