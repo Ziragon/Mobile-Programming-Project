@@ -3,16 +3,20 @@ package com.example.buggame.ui.settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import com.example.buggame.R
 import com.example.buggame.data.model.GameSettings
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsContent(
     state: SettingsState,
@@ -21,7 +25,8 @@ fun SettingsContent(
     onBonusIntervalChange: (Int) -> Unit,
     onRoundDurationChange: (Int) -> Unit,
     onSaveClick: () -> Unit,
-    onSaveSnackbarDismissed: () -> Unit = {}
+    onSaveSnackbarDismissed: () -> Unit = {},
+    onBackClick: () -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -33,6 +38,16 @@ fun SettingsContent(
     }
 
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Настройки игры") },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                    }
+                }
+            )
+        },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
         Column(
@@ -40,15 +55,9 @@ fun SettingsContent(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+                .padding(dimensionResource(R.dimen.screen_padding)),
+            verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.section_spacing))
         ) {
-
-            Text(
-                text = "Настройки игры",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
 
             SettingsSliderFloat(
                 label = "Скорость игры",
@@ -59,12 +68,16 @@ fun SettingsContent(
                 onValueChange = onGameSpeedChange
             )
 
+            HorizontalDivider()
+
             SettingsSliderInt(
                 label = "Максимум тараканов на экране",
                 value = state.settings.maxBugsOnScreen,
                 range = 1..30,
                 onValueChange = onMaxBugsChange
             )
+
+            HorizontalDivider()
 
             SettingsSliderInt(
                 label = "Интервал появления бонусов (сек)",
@@ -73,6 +86,8 @@ fun SettingsContent(
                 onValueChange = onBonusIntervalChange
             )
 
+            HorizontalDivider()
+
             SettingsSliderInt(
                 label = "Длительность раунда (сек)",
                 value = state.settings.roundDurationSeconds,
@@ -80,11 +95,13 @@ fun SettingsContent(
                 onValueChange = onRoundDurationChange
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_spacing)))
 
             Button(
                 onClick = onSaveClick,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(dimensionResource(R.dimen.button_height))
             ) {
                 Text("Сохранить")
             }
@@ -140,30 +157,7 @@ private fun SettingsSliderInt(
 @Composable
 private fun SettingsContentPreview() {
     SettingsContent(
-        state = SettingsState(
-            settings = GameSettings(
-                gameSpeed = 1.5f,
-                maxBugsOnScreen = 12,
-                bonusIntervalSeconds = 20,
-                roundDurationSeconds = 90
-            )
-        ),
-        onGameSpeedChange = {},
-        onMaxBugsChange = {},
-        onBonusIntervalChange = {},
-        onRoundDurationChange = {},
-        onSaveClick = {}
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun SettingsContentSavedPreview() {
-    SettingsContent(
-        state = SettingsState(
-            settings = GameSettings(),
-            isSavedSuccess = true
-        ),
+        state = SettingsState(settings = GameSettings()),
         onGameSpeedChange = {},
         onMaxBugsChange = {},
         onBonusIntervalChange = {},

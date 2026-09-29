@@ -6,6 +6,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.buggame.ui.authors.AuthorsScreen
+import com.example.buggame.ui.menu.GamePlaceholderScreen
+import com.example.buggame.ui.menu.MenuScreen
 import com.example.buggame.ui.registration.RegistrationScreen
 import com.example.buggame.ui.rules.RulesScreen
 import com.example.buggame.ui.settings.SettingsScreen
