@@ -36,7 +36,8 @@ fun RegistrationContent(
     onDifficultyChange: (Int) -> Unit,
     onDateChange: (LocalDate) -> Unit,
     onSubmitClick: () -> Unit,
-    onResultDialogDismiss: () -> Unit
+    onResultDialogDismiss: () -> Unit,
+    onStartClick: () -> Unit
 ) {
     var courseMenuExpanded by remember { mutableStateOf(false) }
 
@@ -196,7 +197,8 @@ fun RegistrationContent(
     if (state.isResultDialogVisible && state.submittedProfile != null) {
         ResultDialog(
             profile = state.submittedProfile,
-            onDismiss = onResultDialogDismiss
+            onDismiss = onResultDialogDismiss,
+            onStartClick = onStartClick
         )
     }
 }
@@ -204,7 +206,8 @@ fun RegistrationContent(
 @Composable
 private fun ResultDialog(
     profile: PlayerProfile,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onStartClick: () -> Unit
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -261,7 +264,7 @@ private fun ResultDialog(
                 }
 
                 Button(
-                    onClick = onDismiss,
+                    onClick = onStartClick,
                     modifier = Modifier
                         .padding(top = 8.dp)
                         .widthIn(min = 160.dp)

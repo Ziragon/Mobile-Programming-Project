@@ -7,7 +7,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun RegistrationScreen(
-    viewModel: RegistrationViewModel = viewModel()
+    viewModel: RegistrationViewModel = viewModel(),
+    onRegistrationComplete: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -19,6 +20,11 @@ fun RegistrationScreen(
         onDifficultyChange = viewModel::onDifficultyChanged,
         onDateChange = viewModel::onBirthDateChanged,
         onSubmitClick = viewModel::onSubmitClicked,
-        onResultDialogDismiss = viewModel::onResultDialogDismissed
+        onResultDialogDismiss = viewModel::onResultDialogDismissed,
+        onStartClick = {
+            viewModel.onResultDialogDismissed()
+            onRegistrationComplete()
+        }
+
     )
 }
