@@ -49,15 +49,21 @@ fun AppNavGraph(
         }
 
         composable(Routes.RULES) {
-            RulesScreen()
+            RulesScreen(
+                onBackClick = { navController.popBackStack() }
+            )
         }
 
         composable(Routes.AUTHORS) {
-            AuthorsScreen()
+            AuthorsScreen(
+                onBackClick = { navController.popBackStack() }
+            )
         }
 
         composable(Routes.SETTINGS) {
-            SettingsScreen()
+            SettingsScreen(
+                onBackClick = { navController.popBackStack() }
+            )
         }
 
         composable(Routes.GAME) {
