@@ -10,11 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -44,6 +40,18 @@ fun RegistrationContent(
 ) {
     var courseMenuExpanded by remember { mutableStateOf(false) }
 
+    var nameTouched by remember { mutableStateOf(false) }
+    var submitAttempted by remember { mutableStateOf(false) }
+
+    val today = remember { LocalDate.now() }
+
+    val isNameValid = state.fullName.isNotBlank()
+    val isBirthDateValid = !state.birthDate.isAfter(today)
+    val isFormValid = isNameValid && isBirthDateValid
+
+    val showNameError = (nameTouched || submitAttempted) && !isNameValid
+    val showBirthDateError = submitAttempted && !isBirthDateValid
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -61,14 +69,26 @@ fun RegistrationContent(
 
         OutlinedTextField(
             value = state.fullName,
-            onValueChange = onNameChange,
-            label = { Text("ФИО") },
+            onValueChange = {
+                nameTouched = true
+                onNameChange(it)
+            },
+            label = { Text("ФИО *") },
+            isError = showNameError,
+            supportingText = {
+                if (showNameError) {
+                    Text(
+                        text = "Поле обязательно для заполнения",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
 
         Column {
-            Text(text = "Пол", style = MaterialTheme.typography.labelLarge)
+            Text(text = "Пол *", style = MaterialTheme.typography.labelLarge)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Gender.entries.forEach { g ->
                     RadioButton(
@@ -88,7 +108,7 @@ fun RegistrationContent(
                 value = state.course.title,
                 onValueChange = {},
                 readOnly = true,
-                label = { Text("Курс") },
+                label = { Text("Курс *") },
                 trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
                 modifier = Modifier
                     .menuAnchor()
@@ -112,7 +132,7 @@ fun RegistrationContent(
 
         Column {
             Text(
-                text = "Уровень сложности: ${state.difficulty}",
+                text = "Уровень сложности: ${state.difficulty} *",
                 style = MaterialTheme.typography.labelLarge
             )
             Slider(
@@ -124,27 +144,52 @@ fun RegistrationContent(
         }
 
         Column {
-            Text(text = "Дата рождения", style = MaterialTheme.typography.labelLarge)
+            Text(text = "Дата рождения *", style = MaterialTheme.typography.labelLarge)
             AndroidView(
                 factory = { context ->
                     val themedContext = ContextThemeWrapper(context, R.style.CalendarViewStyle)
                     CalendarView(themedContext).apply {
+                        maxDate = System.currentTimeMillis()
                         setOnDateChangeListener { _, year, month, dayOfMonth ->
                             onDateChange(LocalDate.of(year, month + 1, dayOfMonth))
                         }
                     }
                 },
+                update = { calendarView ->
+                    calendarView.maxDate = System.currentTimeMillis()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(360.dp)
             )
+            if (showBirthDateError) {
+                Text(
+                    text = "Дата рождения не может быть из будущего",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
 
         Button(
-            onClick = onSubmitClick,
+            onClick = {
+                submitAttempted = true
+                nameTouched = true
+                if (isFormValid) {
+                    onSubmitClick()
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Зарегистрировать")
+        }
+
+        if (submitAttempted && !isFormValid) {
+            Text(
+                text = "Заполните все обязательные поля корректно",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
         }
     }
 
