@@ -3,6 +3,7 @@
     <style name="CalendarViewStyle" parent="Theme.MaterialComponents.Light">
         <item name="android:textColorPrimary">#FFFFFF</item>
         <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textColorSecondary">#FFFFFF</item>
         <item name="colorAccent">@color/accent_primary</item>
         <item name="android:forceDarkAllowed">false</item>
     </style>
