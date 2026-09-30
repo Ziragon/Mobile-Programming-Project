@@ -7,7 +7,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -23,47 +22,30 @@ import androidx.compose.ui.unit.dp
 import com.example.buggame.R
 import com.example.buggame.data.model.Author
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthorsContent(
-    state: AuthorsState,
-    onBackClick: () -> Unit = {}
+    state: AuthorsState
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Об авторах") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
-                    }
-                }
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        when {
+            state.isLoading -> CircularProgressIndicator()
+
+            state.authors.isEmpty() -> Text(
+                text = "Список авторов пуст",
+                style = MaterialTheme.typography.bodyLarge
             )
-        }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentAlignment = Alignment.Center
-        ) {
-            when {
-                state.isLoading -> CircularProgressIndicator()
 
-                state.authors.isEmpty() -> Text(
-                    text = "Список авторов пуст",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-
-                else -> LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(dimensionResource(R.dimen.screen_padding)),
-                    verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.item_spacing))
-                ) {
-                    items(state.authors, key = { it.id }) { author ->
-                        AuthorItem(author = author)
-                    }
+            else -> LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(dimensionResource(R.dimen.screen_padding)),
+                verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.item_spacing))
+            ) {
+                items(state.authors, key = { it.id }) { author ->
+                    AuthorItem(author = author)
                 }
             }
         }

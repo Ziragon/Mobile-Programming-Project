@@ -5,20 +5,12 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.buggame.ui.authors.AuthorsScreen
-import com.example.buggame.ui.menu.GamePlaceholderScreen
-import com.example.buggame.ui.menu.MenuScreen
+import com.example.buggame.ui.menu.MainTabsScreen
 import com.example.buggame.ui.registration.RegistrationScreen
-import com.example.buggame.ui.rules.RulesScreen
-import com.example.buggame.ui.settings.SettingsScreen
 
 object Routes {
     const val REGISTRATION = "registration"
-    const val MENU = "menu"
-    const val RULES = "rules"
-    const val AUTHORS = "authors"
-    const val SETTINGS = "settings"
-    const val GAME = "game"
+    const val MAIN = "main"
 }
 
 @Composable
@@ -32,43 +24,15 @@ fun AppNavGraph(
         composable(Routes.REGISTRATION) {
             RegistrationScreen(
                 onRegistrationComplete = {
-                    navController.navigate(Routes.MENU) {
+                    navController.navigate(Routes.MAIN) {
                         popUpTo(Routes.REGISTRATION) { inclusive = true }
                     }
                 }
             )
         }
 
-        composable(Routes.MENU) {
-            MenuScreen(
-                onRulesClick = { navController.navigate(Routes.RULES) },
-                onAuthorsClick = { navController.navigate(Routes.AUTHORS) },
-                onSettingsClick = { navController.navigate(Routes.SETTINGS) },
-                onPlayClick = { navController.navigate(Routes.GAME) }
-            )
-        }
-
-        composable(Routes.RULES) {
-            RulesScreen(
-                onBackClick = { navController.popBackStack() }
-            )
-        }
-
-        composable(Routes.AUTHORS) {
-            AuthorsScreen(
-                onBackClick = { navController.popBackStack() }
-            )
-        }
-
-        composable(Routes.SETTINGS) {
-            SettingsScreen(
-                onBackClick = { navController.popBackStack() }
-            )
-        }
-
-        composable(Routes.GAME) {
-            // заглушка, пока нет игрового экрана
-            GamePlaceholderScreen()
+        composable(Routes.MAIN) {
+            MainTabsScreen()
         }
     }
 }

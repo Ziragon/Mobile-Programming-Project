@@ -7,13 +7,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun AuthorsScreen(
-    viewModel: AuthorsViewModel = viewModel(),
-    onBackClick: () -> Unit = {}
+    viewModel: AuthorsViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
 
     AuthorsContent(
-        state = state,
-        onBackClick = onBackClick
+        state = state
     )
 }

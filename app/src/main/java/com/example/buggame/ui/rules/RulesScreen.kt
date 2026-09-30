@@ -7,14 +7,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun RulesScreen(
-    viewModel: RulesViewModel = viewModel(),
-    onBackClick: () -> Unit = {}
+    viewModel: RulesViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
 
     RulesContent(
         state = state,
-        onRetryClick = { viewModel.loadRules() },
-        onBackClick = onBackClick
+        onRetryClick = { viewModel.loadRules() }
     )
 }

@@ -3,7 +3,6 @@ package com.example.buggame.ui.rules
 import android.webkit.WebView
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -15,41 +14,24 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.buggame.R
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RulesContent(
     state: RulesState,
-    onRetryClick: () -> Unit = {},
-    onBackClick: () -> Unit = {}
+    onRetryClick: () -> Unit = {}
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Правила игры") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
-                    }
-                }
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        when {
+            state.isLoading -> CircularProgressIndicator()
+
+            state.errorMessage != null -> ErrorContent(
+                message = state.errorMessage,
+                onRetryClick = onRetryClick
             )
-        }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentAlignment = Alignment.Center
-        ) {
-            when {
-                state.isLoading -> CircularProgressIndicator()
 
-                state.errorMessage != null -> ErrorContent(
-                    message = state.errorMessage,
-                    onRetryClick = onRetryClick
-                )
-
-                else -> RulesWebView(htmlContent = state.htmlContent)
-            }
+            else -> RulesWebView(htmlContent = state.htmlContent)
         }
     }
 }

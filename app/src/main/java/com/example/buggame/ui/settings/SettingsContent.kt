@@ -3,109 +3,64 @@ package com.example.buggame.ui.settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.buggame.R
 import com.example.buggame.data.model.GameSettings
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsContent(
     state: SettingsState,
     onGameSpeedChange: (Float) -> Unit,
     onMaxBugsChange: (Int) -> Unit,
     onBonusIntervalChange: (Int) -> Unit,
-    onRoundDurationChange: (Int) -> Unit,
-    onSaveClick: () -> Unit,
-    onSaveSnackbarDismissed: () -> Unit = {},
-    onBackClick: () -> Unit = {}
+    onRoundDurationChange: (Int) -> Unit
 ) {
-    val snackbarHostState = remember { SnackbarHostState() }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(dimensionResource(R.dimen.screen_padding)),
+        verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.section_spacing))
+    ) {
+        SettingsSliderFloat(
+            label = "Скорость игры",
+            value = state.settings.gameSpeed,
+            valueText = "×${"%.1f".format(state.settings.gameSpeed)}",
+            range = 0.5f..3.0f,
+            steps = 24,
+            onValueChange = onGameSpeedChange
+        )
 
-    LaunchedEffect(state.isSavedSuccess) {
-        if (state.isSavedSuccess) {
-            snackbarHostState.showSnackbar("Настройки сохранены")
-            onSaveSnackbarDismissed()
-        }
-    }
+        HorizontalDivider()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Настройки игры") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
-                    }
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(dimensionResource(R.dimen.screen_padding)),
-            verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.section_spacing))
-        ) {
+        SettingsSliderInt(
+            label = "Максимум тараканов на экране",
+            value = state.settings.maxBugsOnScreen,
+            range = 1..30,
+            onValueChange = onMaxBugsChange
+        )
 
-            SettingsSliderFloat(
-                label = "Скорость игры",
-                value = state.settings.gameSpeed,
-                valueText = "×${"%.1f".format(state.settings.gameSpeed)}",
-                range = 0.5f..3.0f,
-                steps = 24,
-                onValueChange = onGameSpeedChange
-            )
+        HorizontalDivider()
 
-            HorizontalDivider()
+        SettingsSliderInt(
+            label = "Интервал появления бонусов (сек)",
+            value = state.settings.bonusIntervalSeconds,
+            range = 5..60,
+            onValueChange = onBonusIntervalChange
+        )
 
-            SettingsSliderInt(
-                label = "Максимум тараканов на экране",
-                value = state.settings.maxBugsOnScreen,
-                range = 1..30,
-                onValueChange = onMaxBugsChange
-            )
+        HorizontalDivider()
 
-            HorizontalDivider()
-
-            SettingsSliderInt(
-                label = "Интервал появления бонусов (сек)",
-                value = state.settings.bonusIntervalSeconds,
-                range = 5..60,
-                onValueChange = onBonusIntervalChange
-            )
-
-            HorizontalDivider()
-
-            SettingsSliderInt(
-                label = "Длительность раунда (сек)",
-                value = state.settings.roundDurationSeconds,
-                range = 30..300,
-                onValueChange = onRoundDurationChange
-            )
-
-            Spacer(modifier = Modifier.height(dimensionResource(R.dimen.item_spacing)))
-
-            Button(
-                onClick = onSaveClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(dimensionResource(R.dimen.button_height))
-            ) {
-                Text("Сохранить")
-            }
-        }
+        SettingsSliderInt(
+            label = "Длительность раунда (сек)",
+            value = state.settings.roundDurationSeconds,
+            range = 30..300,
+            onValueChange = onRoundDurationChange
+        )
     }
 }
 
@@ -161,7 +116,6 @@ private fun SettingsContentPreview() {
         onGameSpeedChange = {},
         onMaxBugsChange = {},
         onBonusIntervalChange = {},
-        onRoundDurationChange = {},
-        onSaveClick = {}
+        onRoundDurationChange = {}
     )
 }
