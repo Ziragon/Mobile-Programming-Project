@@ -6,10 +6,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.buggame.ui.menu.MainTabsScreen
-import com.example.buggame.ui.registration.RegistrationScreen
 
 object Routes {
-    const val REGISTRATION = "registration"
     const val MAIN = "main"
 }
 
@@ -19,18 +17,8 @@ fun AppNavGraph(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Routes.REGISTRATION
+        startDestination = Routes.MAIN
     ) {
-        composable(Routes.REGISTRATION) {
-            RegistrationScreen(
-                onRegistrationComplete = {
-                    navController.navigate(Routes.MAIN) {
-                        popUpTo(Routes.REGISTRATION) { inclusive = true }
-                    }
-                }
-            )
-        }
-
         composable(Routes.MAIN) {
             MainTabsScreen()
         }
