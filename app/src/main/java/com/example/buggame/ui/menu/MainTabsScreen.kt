@@ -1,21 +1,20 @@
 package com.example.buggame.ui.menu
 
+
 import androidx.annotation.DrawableRes
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.buggame.R
 import com.example.buggame.ui.authors.AuthorsScreen
 import com.example.buggame.ui.game.GameScreen
+import com.example.buggame.ui.game.GameViewModel
 import com.example.buggame.ui.registration.RegistrationScreen
 import com.example.buggame.ui.rules.RulesScreen
 import com.example.buggame.ui.settings.SettingsScreen
@@ -26,7 +25,7 @@ enum class MainTab(val title: String, @DrawableRes val iconRes: Int?) {
     SETTINGS("Настройки", R.drawable.settings_icon),
     GAME("Игра", null),
     RULES("Правила", R.drawable.rules_icon),
-    AUTHORS("Авторы", R.drawable.authors_icon),
+    AUTHORS("Авторы", R.drawable.authors_icon)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,43 +35,54 @@ fun MainTabsScreen() {
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val coroutineScope = rememberCoroutineScope()
 
+    val gameViewModel: GameViewModel = viewModel()
+    val gameState by gameViewModel.uiState.collectAsState()
+
+    val isGameplayActive = gameState.isRunning
+
     Scaffold(
         topBar = {
-            PrimaryTabRow(
-                selectedTabIndex = pagerState.currentPage,
-                modifier = Modifier.statusBarsPadding()
-            ) {
-                tabs.forEachIndexed { index, tab ->
-                    val hasIcon = tab.iconRes != null
-                    Tab(
-                        selected = pagerState.currentPage == index,
-                        onClick = {
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(index)
-                            }
-                        },
-                        icon = if (hasIcon) {
-                            {
-                                Icon(
-                                    painter = painterResource(id = tab.iconRes),
-                                    contentDescription = tab.title,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        } else null,
-                        text = if (!hasIcon) {
-                            { Text(tab.title) }
-                        } else null
-                    )
+            if (!isGameplayActive) {
+                PrimaryTabRow(
+                    selectedTabIndex = pagerState.currentPage,
+                    modifier = Modifier.statusBarsPadding()
+                ) {
+                    tabs.forEachIndexed { index, tab ->
+                        val hasIcon = tab.iconRes != null
+                        Tab(
+                            selected = pagerState.currentPage == index,
+                            onClick = {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(index)
+                                }
+                            },
+                            icon = if (hasIcon) {
+                                {
+                                    Icon(
+                                        painter = painterResource(id = tab.iconRes),
+                                        contentDescription = tab.title,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            } else null,
+                            text = if (!hasIcon) {
+                                { Text(tab.title) }
+                            } else null
+                        )
+                    }
                 }
             }
         }
     ) { innerPadding ->
         HorizontalPager(
             state = pagerState,
+            userScrollEnabled = !isGameplayActive,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .then(
+                    if (isGameplayActive) Modifier.statusBarsPadding() else Modifier
+                )
         ) { page ->
             when (tabs[page]) {
                 MainTab.REGISTRATION -> RegistrationScreen(
@@ -83,7 +93,7 @@ fun MainTabsScreen() {
                     }
                 )
                 MainTab.SETTINGS -> SettingsScreen()
-                MainTab.GAME -> GameScreen()
+                MainTab.GAME -> GameScreen(viewModel = gameViewModel)
                 MainTab.RULES -> RulesScreen()
                 MainTab.AUTHORS -> AuthorsScreen()
             }
