@@ -28,40 +28,73 @@ class GameViewModel : ViewModel() {
         const val MISS_PENALTY = 3
     }
 
+    private var bonusSpawnJob: Job? = null
+
+    private fun startBonusSpawning() {
+        bonusSpawnJob?.cancel()
+        bonusSpawnJob = viewModelScope.launch {
+            while (_uiState.value.isRunning) {
+                delay(settings.bonusIntervalSeconds * 1000L)
+
+                val current = _uiState.value
+                if (current.isRunning && current.insects.size < settings.maxBugsOnScreen) {
+                    val bonus = InsectSpawn(
+                        id = ++nextInsectId,
+                        type = InsectType.entries.random(),
+                        isBonus = true
+                    )
+                    _uiState.value = current.copy(insects = current.insects + bonus)
+                }
+            }
+        }
+    }
+
     fun updateSettings(newSettings: GameSettings) {
         settings = newSettings
+        val current = _uiState.value
+        if (!current.isRunning && !current.isMidRound) {
+            _uiState.value = current.copy(timeLeftSeconds = newSettings.roundDurationSeconds)
+        }
     }
 
     fun onStartClicked() {
         val current = _uiState.value
         if (current.isRunning) return
 
-        _uiState.value = if (current.isRoundOver || current.timeLeftSeconds <= 0) {
+        _uiState.value = if (current.isMidRound) {
+
+            current.copy(isRunning = true)
+        } else {
             GameUiState(
                 isRunning = true,
+                isMidRound = true,
                 timeLeftSeconds = settings.roundDurationSeconds
             )
-        } else {
-            current.copy(isRunning = true)
         }
         startTimer()
         startSpawning()
+        startBonusSpawning()
     }
 
     fun onPauseClicked() {
         timerJob?.cancel()
         spawnJob?.cancel()
+        bonusSpawnJob?.cancel()
         _uiState.value = _uiState.value.copy(isRunning = false)
     }
 
     fun onResetClicked() {
         timerJob?.cancel()
         spawnJob?.cancel()
+        bonusSpawnJob?.cancel()
         _uiState.value = GameUiState(timeLeftSeconds = settings.roundDurationSeconds)
     }
 
     fun onRoundOverDialogDismissed() {
-        _uiState.value = _uiState.value.copy(isRoundOver = false)
+        _uiState.value = _uiState.value.copy(
+            isRoundOver = false,
+            timeLeftSeconds = settings.roundDurationSeconds
+        )
     }
 
     fun onInsectTapped(insectId: Long) {
@@ -71,7 +104,7 @@ class GameViewModel : ViewModel() {
 
         _uiState.value = current.copy(
             insects = current.insects.filterNot { it.id == insectId },
-            score = (current.score + insect.type.points).coerceAtLeast(0)
+            score = (current.score + insect.points).coerceAtLeast(0)
         )
     }
 
@@ -98,6 +131,7 @@ class GameViewModel : ViewModel() {
                     timeLeftSeconds = newTime,
                     isRunning = !roundOver,
                     isRoundOver = roundOver,
+                    isMidRound = !roundOver,
                     insects = if (roundOver) emptyList() else current.insects
                 )
             }
@@ -126,5 +160,6 @@ class GameViewModel : ViewModel() {
         super.onCleared()
         timerJob?.cancel()
         spawnJob?.cancel()
+        bonusSpawnJob?.cancel()
     }
 }

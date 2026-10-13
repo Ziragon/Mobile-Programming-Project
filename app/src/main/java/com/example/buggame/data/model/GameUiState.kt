@@ -5,6 +5,7 @@ data class GameUiState(
     val timeLeftSeconds: Int = DEFAULT_ROUND_DURATION_SECONDS,
     val isRunning: Boolean = false,
     val isRoundOver: Boolean = false,
+    val isMidRound: Boolean = false,
     val insects: List<InsectSpawn> = emptyList()
 ) {
     companion object {

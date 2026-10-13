@@ -2,18 +2,27 @@ package com.example.buggame.ui.game
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -34,6 +43,8 @@ import com.example.buggame.ui.settings.SettingsViewModel
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 import kotlin.random.Random
+
+private const val ICON_VISUAL_SCALE_COMPENSATION = 1.2f
 
 @Composable
 fun GameScreen(
@@ -76,6 +87,7 @@ fun GameScreen(
                     .fillMaxWidth()
                     .weight(1f)
                     .padding(horizontal = 16.dp)
+                    .clipToBounds()
                     .pointerInput(Unit) {
                         detectTapGestures {
                             viewModel.onMissTapped()
@@ -85,7 +97,7 @@ fun GameScreen(
                 val density = LocalDensity.current
                 val areaWidthPx = with(density) { maxWidth.toPx() }
                 val areaHeightPx = with(density) { maxHeight.toPx() }
-                val insectSizeDp = 56.dp
+                val insectSizeDp = 40.dp
                 val insectSizePx = with(density) { insectSizeDp.toPx() }
 
                 if (!state.isRunning && !state.isRoundOver) {
@@ -104,7 +116,7 @@ fun GameScreen(
                             areaHeightPx = areaHeightPx,
                             insectSizeDp = insectSizeDp,
                             insectSizePx = insectSizePx,
-                            speedPxPerSec = settingsState.settings.insectSpeedPxPerSec,
+                            baseSpeedPxPerSec = settingsState.settings.insectSpeedPxPerSec,
                             isRunning = state.isRunning,
                             onTapped = { viewModel.onInsectTapped(insect.id) }
                         )
@@ -158,10 +170,12 @@ private fun InsectView(
     areaHeightPx: Float,
     insectSizeDp: Dp,
     insectSizePx: Float,
-    speedPxPerSec: Float,
+    baseSpeedPxPerSec: Float,
     isRunning: Boolean,
     onTapped: () -> Unit
 ) {
+    val effectiveSpeed = baseSpeedPxPerSec * insect.speedMultiplier
+
     val position = remember(insect.id) {
         Animatable(
             initialValue = Offset(
@@ -188,9 +202,9 @@ private fun InsectView(
                 y = Random.nextFloat() * (areaHeightPx - insectSizePx)
             )
             val distance = (target - position.value).getDistance()
-            val durationMs = ((distance / speedPxPerSec) * 1000)
+            val durationMs = ((distance / effectiveSpeed) * 1000)
                 .toInt()
-                .coerceIn(300, 4000)
+                .coerceIn(200, 4000)
 
             position.animateTo(
                 targetValue = target,
@@ -211,10 +225,34 @@ private fun InsectView(
                 onClick = onTapped
             )
     ) {
+        if (insect.isBonus) {
+            val infiniteTransition = rememberInfiniteTransition(label = "bonusPulse")
+            val pulseAlpha by infiniteTransition.animateFloat(
+                initialValue = 0.3f,
+                targetValue = 0.9f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(500, easing = LinearEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "bonusAlpha"
+            )
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .scale(1.5f)
+                    .background(
+                        color = Color(0xFFFFD700).copy(alpha = pulseAlpha),
+                        shape = CircleShape
+                    )
+            )
+        }
+
         Image(
-            painter = painterResource(id = insect.type.iconRes),
-            contentDescription = insect.type.contentDescription,
-            modifier = Modifier.fillMaxSize()
+            painter = painterResource(id = insect.iconRes),
+            contentDescription = insect.contentDescription,
+            modifier = Modifier
+                .fillMaxSize()
+                .scale(ICON_VISUAL_SCALE_COMPENSATION)
         )
     }
 }
