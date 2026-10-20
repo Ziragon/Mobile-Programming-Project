@@ -14,6 +14,8 @@ lifecycle = "2.8.7"
 navigation = "2.8.4"
 lottie-compose = "6.5.2"
 koin-version = "4.2.2"
+ksp = "2.3.5"
+room = "2.8.5"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -38,8 +40,12 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 insert-koin = { group = "io.insert-koin", name = "koin-android", version.ref = "koin-version" }
 insert-koin-compose = { group = "io.insert-koin", name = "koin-androidx-compose", version.ref = "koin-version" }
 airbnb-lottie-compose = { group = "com.airbnb.android", name = "lottie-compose", version.ref = "lottie-compose" }
+room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

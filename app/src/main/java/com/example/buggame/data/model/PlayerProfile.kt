@@ -15,6 +15,7 @@ enum class Course(val number: Int, val title: String) {
 }
 
 data class PlayerProfile(
+    val id: Long = 0,
     val fullName: String,
     val gender: Gender,
     val course: Course,
