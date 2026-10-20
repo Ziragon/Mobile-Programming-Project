@@ -1,4 +1,6 @@
-package com.example.buggame.data.model
+package com.example.buggame.ui.game
+
+import com.example.buggame.data.model.InsectSpawn
 
 data class GameUiState(
     val score: Int = 0,

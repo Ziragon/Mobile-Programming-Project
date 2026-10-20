@@ -1,5 +1,6 @@
 package com.example.buggame.ui.game
 
+import android.annotation.SuppressLint
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -43,9 +44,11 @@ import com.example.buggame.ui.settings.SettingsViewModel
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 import kotlin.random.Random
+import kotlin.time.Duration.Companion.milliseconds
 
 private const val ICON_VISUAL_SCALE_COMPENSATION = 1.2f
 
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun GameScreen(
     viewModel: GameViewModel = viewModel(),
@@ -193,7 +196,7 @@ private fun InsectView(
 
         while (true) {
             if (!isRunningState.value) {
-                delay(150)
+                delay(150.milliseconds)
                 continue
             }
 

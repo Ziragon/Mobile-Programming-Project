@@ -3,7 +3,6 @@ package com.example.buggame.ui.game
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.buggame.data.model.GameSettings
-import com.example.buggame.data.model.GameUiState
 import com.example.buggame.data.model.InsectSpawn
 import com.example.buggame.data.model.InsectType
 import kotlinx.coroutines.Job
@@ -12,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 class GameViewModel : ViewModel() {
 
@@ -34,7 +34,7 @@ class GameViewModel : ViewModel() {
         bonusSpawnJob?.cancel()
         bonusSpawnJob = viewModelScope.launch {
             while (_uiState.value.isRunning) {
-                delay(settings.bonusIntervalSeconds * 1000L)
+                delay((settings.bonusIntervalSeconds * 1000L).milliseconds)
 
                 val current = _uiState.value
                 if (current.isRunning && current.insects.size < settings.maxBugsOnScreen) {
@@ -121,7 +121,7 @@ class GameViewModel : ViewModel() {
         timerJob?.cancel()
         timerJob = viewModelScope.launch {
             while (_uiState.value.isRunning && _uiState.value.timeLeftSeconds > 0) {
-                delay(1000)
+                delay(1000.milliseconds)
                 val current = _uiState.value
                 if (!current.isRunning) break
 
@@ -142,7 +142,7 @@ class GameViewModel : ViewModel() {
         spawnJob?.cancel()
         spawnJob = viewModelScope.launch {
             while (_uiState.value.isRunning) {
-                delay(settings.insectSpawnIntervalMillis)
+                delay(settings.insectSpawnIntervalMillis.milliseconds)
 
                 val current = _uiState.value
                 if (current.isRunning && current.insects.size < settings.maxBugsOnScreen) {
