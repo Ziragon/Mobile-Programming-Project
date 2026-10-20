@@ -10,7 +10,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.buggame.R
 import com.example.buggame.ui.authors.AuthorsScreen
 import com.example.buggame.ui.game.GameScreen
@@ -19,6 +18,7 @@ import com.example.buggame.ui.registration.RegistrationScreen
 import com.example.buggame.ui.rules.RulesScreen
 import com.example.buggame.ui.settings.SettingsScreen
 import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
 
 enum class MainTab(val title: String, @DrawableRes val iconRes: Int?) {
     REGISTRATION("Регистрация", R.drawable.registration_icon),
@@ -35,7 +35,7 @@ fun MainTabsScreen() {
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val coroutineScope = rememberCoroutineScope()
 
-    val gameViewModel: GameViewModel = viewModel()
+    val gameViewModel: GameViewModel = koinViewModel()
     val gameState by gameViewModel.uiState.collectAsState()
 
     val isGameplayActive = gameState.isRunning
