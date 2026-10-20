@@ -26,8 +26,8 @@ import org.koin.androidx.compose.koinViewModel
 enum class MainTab(val title: String, @DrawableRes val iconRes: Int?) {
     REGISTRATION("Регистрация", R.drawable.registration_icon),
     SETTINGS("Настройки", R.drawable.settings_icon),
-    GAME("Игра", null),
-    LEADERBOARD("Рекорды", null),
+    GAME("Игра", R.drawable.play),
+    LEADERBOARD("Рекорды", R.drawable.podium),
     RULES("Правила", R.drawable.rules_icon),
     AUTHORS("Авторы", R.drawable.authors_icon)
 }
