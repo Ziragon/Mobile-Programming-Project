@@ -1,5 +1,7 @@
 package com.example.buggame.ui.game
 
+import android.content.Context
+import android.media.MediaPlayer
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -25,6 +27,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -39,12 +42,15 @@ import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.example.buggame.R
 import com.example.buggame.data.model.InsectSpawn
+import com.example.buggame.data.model.TiltBonusSpawn
+import com.example.buggame.sensor.TiltSensorManager
 import com.example.buggame.ui.settings.SettingsViewModel
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
 private const val ICON_VISUAL_SCALE_COMPENSATION = 1.2f
+private const val TILT_BONUS_SOUND_RAW_NAME = "bonus_tickle"
 
 @Composable
 fun GameScreen(
@@ -53,9 +59,17 @@ fun GameScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val settingsState by settingsViewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val tiltOffset by rememberTiltOffset()
 
     LaunchedEffect(settingsState.settings) {
         viewModel.updateSettings(settingsState.settings)
+    }
+
+    LaunchedEffect(viewModel) {
+        viewModel.tiltBonusActivatedEvent.collect {
+            playTiltBonusSound(context)
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -100,14 +114,6 @@ fun GameScreen(
                 val insectSizeDp = 40.dp
                 val insectSizePx = with(density) { insectSizeDp.toPx() }
 
-                if (!state.isRunning && !state.isRoundOver) {
-                    Text(
-                        text = "Нажмите «Старт», чтобы начать раунд",
-                        modifier = Modifier.align(Alignment.Center),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-
                 state.insects.forEach { insect ->
                     key(insect.id) {
                         InsectView(
@@ -118,9 +124,28 @@ fun GameScreen(
                             insectSizePx = insectSizePx,
                             baseSpeedPxPerSec = settingsState.settings.insectSpeedPxPerSec,
                             isRunning = state.isRunning,
+                            isTiltModeActive = state.isTiltModeActive,
+                            tiltOffset = tiltOffset,
                             onTapped = { viewModel.onInsectTapped(insect.id) }
                         )
                     }
+                }
+
+                state.tiltBonus?.let { bonus ->
+                    TiltBonusView(
+                        bonus = bonus,
+                        areaWidthPx = areaWidthPx,
+                        areaHeightPx = areaHeightPx,
+                        onTapped = { viewModel.onTiltBonusTapped() }
+                    )
+                }
+
+                if (!state.isRunning && !state.isRoundOver) {
+                    Text(
+                        text = "Нажмите «Старт», чтобы начать раунд",
+                        modifier = Modifier.align(Alignment.Center),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
                 }
             }
 
@@ -164,6 +189,27 @@ fun GameScreen(
 }
 
 @Composable
+private fun rememberTiltOffset(): State<Offset> {
+    val context = LocalContext.current
+    val tiltSensorManager = remember { TiltSensorManager(context) }
+    return produceState(initialValue = Offset.Zero) {
+        tiltSensorManager.tiltFlow().collect { value = it }
+    }
+}
+
+private fun playTiltBonusSound(context: Context) {
+    val soundResId = context.resources.getIdentifier(
+        TILT_BONUS_SOUND_RAW_NAME, "raw", context.packageName
+    )
+    if (soundResId != 0) {
+        MediaPlayer.create(context, soundResId)?.apply {
+            setOnCompletionListener { it.release() }
+            start()
+        }
+    }
+}
+
+@Composable
 private fun InsectView(
     insect: InsectSpawn,
     areaWidthPx: Float,
@@ -172,6 +218,8 @@ private fun InsectView(
     insectSizePx: Float,
     baseSpeedPxPerSec: Float,
     isRunning: Boolean,
+    isTiltModeActive: Boolean,
+    tiltOffset: Offset,
     onTapped: () -> Unit
 ) {
     val effectiveSpeed = baseSpeedPxPerSec * insect.speedMultiplier
@@ -187,29 +235,54 @@ private fun InsectView(
     }
 
     val isRunningState = rememberUpdatedState(isRunning)
+    val tiltOffsetState = rememberUpdatedState(tiltOffset)
 
-    LaunchedEffect(insect.id, areaWidthPx, areaHeightPx) {
+    LaunchedEffect(insect.id, areaWidthPx, areaHeightPx, isTiltModeActive) {
         if (areaWidthPx <= insectSizePx || areaHeightPx <= insectSizePx) return@LaunchedEffect
 
-        while (true) {
-            if (!isRunningState.value) {
-                delay(150)
-                continue
+        if (isTiltModeActive) {
+            val tiltSpeedPxPerSec = effectiveSpeed * 4f
+            val frameDelayMs = 16L
+            val dt = frameDelayMs / 1000f
+
+            while (true) {
+                if (!isRunningState.value) {
+                    delay(100)
+                    continue
+                }
+
+                val tilt = tiltOffsetState.value
+                val dx = tilt.x * tiltSpeedPxPerSec * dt
+                val dy = tilt.y * tiltSpeedPxPerSec * dt
+
+                val newX = (position.value.x + dx).coerceIn(0f, areaWidthPx - insectSizePx)
+                val newY = (position.value.y + dy).coerceIn(0f, areaHeightPx - insectSizePx)
+
+                position.snapTo(Offset(newX, newY))
+                delay(frameDelayMs)
             }
+        }
+        else {
+            while (true) {
+                if (!isRunningState.value) {
+                    delay(150)
+                    continue
+                }
 
-            val target = Offset(
-                x = Random.nextFloat() * (areaWidthPx - insectSizePx),
-                y = Random.nextFloat() * (areaHeightPx - insectSizePx)
-            )
-            val distance = (target - position.value).getDistance()
-            val durationMs = ((distance / effectiveSpeed) * 1000)
-                .toInt()
-                .coerceIn(200, 4000)
+                val target = Offset(
+                    x = Random.nextFloat() * (areaWidthPx - insectSizePx),
+                    y = Random.nextFloat() * (areaHeightPx - insectSizePx)
+                )
+                val distance = (target - position.value).getDistance()
+                val durationMs = ((distance / effectiveSpeed) * 1000)
+                    .toInt()
+                    .coerceIn(200, 4000)
 
-            position.animateTo(
-                targetValue = target,
-                animationSpec = tween(durationMs, easing = LinearEasing)
-            )
+                position.animateTo(
+                    targetValue = target,
+                    animationSpec = tween(durationMs, easing = LinearEasing)
+                )
+            }
         }
     }
 
@@ -250,6 +323,54 @@ private fun InsectView(
         Image(
             painter = painterResource(id = insect.iconRes),
             contentDescription = insect.contentDescription,
+            modifier = Modifier
+                .fillMaxSize()
+                .scale(ICON_VISUAL_SCALE_COMPENSATION)
+        )
+    }
+}
+
+@Composable
+private fun TiltBonusView(
+    bonus: TiltBonusSpawn,
+    areaWidthPx: Float,
+    areaHeightPx: Float,
+    onTapped: () -> Unit
+) {
+    val density = LocalDensity.current
+    val sizeDp = 48.dp
+    val sizePx = with(density) { sizeDp.toPx() }
+
+    val offsetX = (bonus.relativeX * (areaWidthPx - sizePx)).coerceAtLeast(0f)
+    val offsetY = (bonus.relativeY * (areaHeightPx - sizePx)).coerceAtLeast(0f)
+
+    val infiniteTransition = rememberInfiniteTransition(label = "tiltBonusPulse")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 0.85f,
+        targetValue = 1.15f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(400, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "tiltBonusScale"
+    )
+
+    Box(
+        modifier = Modifier
+            .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
+            .size(sizeDp)
+            .scale(scale)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onTapped
+            )
+            .background(color = Color(0xFF29B6F6), shape = CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.bonus),
+            contentDescription = "Бонус наклона экрана",
             modifier = Modifier
                 .fillMaxSize()
                 .scale(ICON_VISUAL_SCALE_COMPENSATION)
