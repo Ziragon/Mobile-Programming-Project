@@ -52,7 +52,6 @@ import kotlin.time.Duration.Companion.milliseconds
 import org.koin.androidx.compose.koinViewModel
 
 private const val ICON_VISUAL_SCALE_COMPENSATION = 1.2f
-private const val TILT_BONUS_SOUND_RAW_NAME = "bonus_tickle"
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
@@ -201,14 +200,9 @@ private fun rememberTiltOffset(): State<Offset> {
 }
 
 private fun playTiltBonusSound(context: Context) {
-    val soundResId = context.resources.getIdentifier(
-        TILT_BONUS_SOUND_RAW_NAME, "raw", context.packageName
-    )
-    if (soundResId != 0) {
-        MediaPlayer.create(context, soundResId)?.apply {
-            setOnCompletionListener { it.release() }
-            start()
-        }
+    MediaPlayer.create(context, R.raw.bonus_tickle)?.apply {
+        setOnCompletionListener { it.release() }
+        start()
     }
 }
 
@@ -250,7 +244,7 @@ private fun InsectView(
 
             while (true) {
                 if (!isRunningState.value) {
-                    delay(100)
+                    delay(100.milliseconds)
                     continue
                 }
 
@@ -262,13 +256,13 @@ private fun InsectView(
                 val newY = (position.value.y + dy).coerceIn(0f, areaHeightPx - insectSizePx)
 
                 position.snapTo(Offset(newX, newY))
-                delay(frameDelayMs)
+                delay(frameDelayMs.milliseconds)
             }
         }
         else {
             while (true) {
                 if (!isRunningState.value) {
-                    delay(150)
+                    delay(150.milliseconds)
                     continue
                 }
 

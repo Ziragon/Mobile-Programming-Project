@@ -1,6 +1,7 @@
 package com.example.buggame.ui.game
 
 import com.example.buggame.data.model.InsectSpawn
+import com.example.buggame.data.model.TiltBonusSpawn
 
 data class GameUiState(
     val score: Int = 0,

@@ -3,7 +3,6 @@ package com.example.buggame.ui.game
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.buggame.data.model.GameSettings
-import com.example.buggame.data.model.GameUiState
 import com.example.buggame.data.model.InsectSpawn
 import com.example.buggame.data.model.InsectType
 import com.example.buggame.data.model.TiltBonusSpawn
@@ -68,7 +67,7 @@ class GameViewModel : ViewModel() {
     private fun scheduleNextTiltBonusSpawn() {
         tiltBonusSpawnJob?.cancel()
         tiltBonusSpawnJob = viewModelScope.launch {
-            delay(TILT_BONUS_SPAWN_INTERVAL_SECONDS * 1000L)
+            delay((TILT_BONUS_SPAWN_INTERVAL_SECONDS * 1000L).milliseconds)
 
             val current = _uiState.value
             if (current.isRunning) {
@@ -87,7 +86,7 @@ class GameViewModel : ViewModel() {
 
         tiltBonusLifetimeJob?.cancel()
         tiltBonusLifetimeJob = viewModelScope.launch {
-            delay(TILT_BONUS_LIFETIME_SECONDS * 1000L)
+            delay((TILT_BONUS_LIFETIME_SECONDS * 1000L).milliseconds)
 
             val current = _uiState.value
             if (current.tiltBonus?.id == bonus.id) {
@@ -100,7 +99,7 @@ class GameViewModel : ViewModel() {
     private fun restartTiltBonusLifetimeTimer(bonusId: Long) {
         tiltBonusLifetimeJob?.cancel()
         tiltBonusLifetimeJob = viewModelScope.launch {
-            delay(TILT_BONUS_LIFETIME_SECONDS * 1000L)
+            delay((TILT_BONUS_LIFETIME_SECONDS * 1000L).milliseconds)
             val current = _uiState.value
             if (current.tiltBonus?.id == bonusId) {
                 _uiState.value = current.copy(tiltBonus = null)
@@ -124,7 +123,7 @@ class GameViewModel : ViewModel() {
     private fun restartTiltModeTimer() {
         tiltModeJob?.cancel()
         tiltModeJob = viewModelScope.launch {
-            delay(TILT_MODE_DURATION_SECONDS * 1000L)
+            delay((TILT_MODE_DURATION_SECONDS * 1000L).milliseconds)
             _uiState.value = _uiState.value.copy(isTiltModeActive = false)
             scheduleNextTiltBonusSpawn()
         }
@@ -227,7 +226,7 @@ class GameViewModel : ViewModel() {
                     isMidRound = !roundOver,
                     insects = if (roundOver) emptyList() else current.insects,
                     tiltBonus = if (roundOver) null else current.tiltBonus,
-                    isTiltModeActive = if (roundOver) false else current.isTiltModeActive
+                    isTiltModeActive = !roundOver && current.isTiltModeActive
                 )
 
                 if (roundOver) {
