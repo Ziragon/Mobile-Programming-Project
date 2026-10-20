@@ -3,8 +3,10 @@ package com.example.buggame.ui.game
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.buggame.data.model.GameSettings
+import com.example.buggame.data.model.GameUiState
 import com.example.buggame.data.model.InsectSpawn
 import com.example.buggame.data.model.InsectType
+import com.example.buggame.data.model.TiltBonusSpawn
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,9 +14,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.random.Random
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 class GameViewModel : ViewModel() {
 
+    private val _tiltBonusActivatedEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val tiltBonusActivatedEvent: SharedFlow<Unit> = _tiltBonusActivatedEvent.asSharedFlow()
     private val _uiState = MutableStateFlow(GameUiState())
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
@@ -26,6 +34,9 @@ class GameViewModel : ViewModel() {
 
     private companion object {
         const val MISS_PENALTY = 3
+        const val TILT_BONUS_SPAWN_INTERVAL_SECONDS = 15L
+        const val TILT_BONUS_LIFETIME_SECONDS = 6L
+        const val TILT_MODE_DURATION_SECONDS = 10L
     }
 
     private var bonusSpawnJob: Job? = null
@@ -49,6 +60,76 @@ class GameViewModel : ViewModel() {
         }
     }
 
+    private var tiltBonusSpawnJob: Job? = null
+    private var tiltBonusLifetimeJob: Job? = null
+    private var tiltModeJob: Job? = null
+    private var nextTiltBonusId = 0L
+
+    private fun scheduleNextTiltBonusSpawn() {
+        tiltBonusSpawnJob?.cancel()
+        tiltBonusSpawnJob = viewModelScope.launch {
+            delay(TILT_BONUS_SPAWN_INTERVAL_SECONDS * 1000L)
+
+            val current = _uiState.value
+            if (current.isRunning) {
+                spawnTiltBonus()
+            }
+        }
+    }
+
+    private fun spawnTiltBonus() {
+        val bonus = TiltBonusSpawn(
+            id = ++nextTiltBonusId,
+            relativeX = Random.nextFloat(),
+            relativeY = Random.nextFloat()
+        )
+        _uiState.value = _uiState.value.copy(tiltBonus = bonus)
+
+        tiltBonusLifetimeJob?.cancel()
+        tiltBonusLifetimeJob = viewModelScope.launch {
+            delay(TILT_BONUS_LIFETIME_SECONDS * 1000L)
+
+            val current = _uiState.value
+            if (current.tiltBonus?.id == bonus.id) {
+                _uiState.value = current.copy(tiltBonus = null)
+                scheduleNextTiltBonusSpawn()
+            }
+        }
+    }
+
+    private fun restartTiltBonusLifetimeTimer(bonusId: Long) {
+        tiltBonusLifetimeJob?.cancel()
+        tiltBonusLifetimeJob = viewModelScope.launch {
+            delay(TILT_BONUS_LIFETIME_SECONDS * 1000L)
+            val current = _uiState.value
+            if (current.tiltBonus?.id == bonusId) {
+                _uiState.value = current.copy(tiltBonus = null)
+                scheduleNextTiltBonusSpawn()
+            }
+        }
+    }
+
+    fun onTiltBonusTapped() {
+        val current = _uiState.value
+        if (!current.isRunning || current.tiltBonus == null) return
+
+        tiltBonusLifetimeJob?.cancel()
+        _uiState.value = current.copy(
+            tiltBonus = null,
+            isTiltModeActive = true
+        )
+        restartTiltModeTimer()
+        _tiltBonusActivatedEvent.tryEmit(Unit)
+    }
+    private fun restartTiltModeTimer() {
+        tiltModeJob?.cancel()
+        tiltModeJob = viewModelScope.launch {
+            delay(TILT_MODE_DURATION_SECONDS * 1000L)
+            _uiState.value = _uiState.value.copy(isTiltModeActive = false)
+            scheduleNextTiltBonusSpawn()
+        }
+    }
+
     fun updateSettings(newSettings: GameSettings) {
         settings = newSettings
         val current = _uiState.value
@@ -62,7 +143,6 @@ class GameViewModel : ViewModel() {
         if (current.isRunning) return
 
         _uiState.value = if (current.isMidRound) {
-
             current.copy(isRunning = true)
         } else {
             GameUiState(
@@ -74,12 +154,22 @@ class GameViewModel : ViewModel() {
         startTimer()
         startSpawning()
         startBonusSpawning()
+
+        val resumed = _uiState.value
+        when {
+            resumed.isTiltModeActive -> restartTiltModeTimer()
+            resumed.tiltBonus != null -> restartTiltBonusLifetimeTimer(resumed.tiltBonus.id)
+            else -> scheduleNextTiltBonusSpawn()
+        }
     }
 
     fun onPauseClicked() {
         timerJob?.cancel()
         spawnJob?.cancel()
         bonusSpawnJob?.cancel()
+        tiltBonusSpawnJob?.cancel()
+        tiltBonusLifetimeJob?.cancel()
+        tiltModeJob?.cancel()
         _uiState.value = _uiState.value.copy(isRunning = false)
     }
 
@@ -87,6 +177,9 @@ class GameViewModel : ViewModel() {
         timerJob?.cancel()
         spawnJob?.cancel()
         bonusSpawnJob?.cancel()
+        tiltBonusSpawnJob?.cancel()
+        tiltBonusLifetimeJob?.cancel()
+        tiltModeJob?.cancel()
         _uiState.value = GameUiState(timeLeftSeconds = settings.roundDurationSeconds)
     }
 
@@ -132,8 +225,18 @@ class GameViewModel : ViewModel() {
                     isRunning = !roundOver,
                     isRoundOver = roundOver,
                     isMidRound = !roundOver,
-                    insects = if (roundOver) emptyList() else current.insects
+                    insects = if (roundOver) emptyList() else current.insects,
+                    tiltBonus = if (roundOver) null else current.tiltBonus,
+                    isTiltModeActive = if (roundOver) false else current.isTiltModeActive
                 )
+
+                if (roundOver) {
+                    spawnJob?.cancel()
+                    bonusSpawnJob?.cancel()
+                    tiltBonusSpawnJob?.cancel()
+                    tiltBonusLifetimeJob?.cancel()
+                    tiltModeJob?.cancel()
+                }
             }
         }
     }
@@ -161,5 +264,8 @@ class GameViewModel : ViewModel() {
         timerJob?.cancel()
         spawnJob?.cancel()
         bonusSpawnJob?.cancel()
+        tiltBonusSpawnJob?.cancel()
+        tiltBonusLifetimeJob?.cancel()
+        tiltModeJob?.cancel()
     }
 }

@@ -8,7 +8,9 @@ data class GameUiState(
     val isRunning: Boolean = false,
     val isRoundOver: Boolean = false,
     val isMidRound: Boolean = false,
-    val insects: List<InsectSpawn> = emptyList()
+    val insects: List<InsectSpawn> = emptyList(),
+    val tiltBonus: TiltBonusSpawn? = null,
+    val isTiltModeActive: Boolean = false
 ) {
     companion object {
         const val DEFAULT_ROUND_DURATION_SECONDS = 60
