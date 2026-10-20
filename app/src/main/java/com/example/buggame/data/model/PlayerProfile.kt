@@ -19,7 +19,6 @@ data class PlayerProfile(
     val fullName: String,
     val gender: Gender,
     val course: Course,
-    val difficulty: Int,
     val birthDate: LocalDate,
     val zodiacSign: ZodiacSign
 )

@@ -19,7 +19,7 @@ val appModule = module {
             androidContext(),
             AppDatabase::class.java,
             "buggame_database.db"
-        ).fallbackToDestructiveMigration().build()
+        ).fallbackToDestructiveMigration(dropAllTables = true).build()
     }
 
     single { get<AppDatabase>().playerDao() }

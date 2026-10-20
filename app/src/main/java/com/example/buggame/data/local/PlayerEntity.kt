@@ -15,7 +15,6 @@ data class PlayerEntity(
     val fullName: String,
     val genderName: String,
     val courseName: String,
-    val difficulty: Int,
     val birthDateEpochDay: Long,
     val zodiacSignName: String
 )
@@ -25,7 +24,6 @@ fun PlayerEntity.toDomain(): PlayerProfile = PlayerProfile(
     fullName = fullName,
     gender = Gender.valueOf(genderName),
     course = Course.valueOf(courseName),
-    difficulty = difficulty,
     birthDate = LocalDate.ofEpochDay(birthDateEpochDay),
     zodiacSign = ZodiacSign.valueOf(zodiacSignName)
 )
@@ -35,7 +33,6 @@ fun PlayerProfile.toEntity(): PlayerEntity = PlayerEntity(
     fullName = fullName,
     genderName = gender.name,
     courseName = course.name,
-    difficulty = difficulty,
     birthDateEpochDay = birthDate.toEpochDay(),
     zodiacSignName = zodiacSign.name
 )

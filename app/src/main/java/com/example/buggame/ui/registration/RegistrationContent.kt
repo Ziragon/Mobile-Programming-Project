@@ -3,12 +3,15 @@ package com.example.buggame.ui.registration
 import android.view.ContextThemeWrapper
 import android.widget.CalendarView
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,33 +29,20 @@ import com.example.buggame.data.model.PlayerProfile
 import com.example.buggame.data.model.ZodiacSign
 import java.time.LocalDate
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegistrationContent(
     state: RegistrationState,
+    onModeChange: (RegistrationMode) -> Unit,
     onNameChange: (String) -> Unit,
     onGenderChange: (Gender) -> Unit,
     onCourseChange: (Course) -> Unit,
-    onDifficultyChange: (Int) -> Unit,
     onDateChange: (LocalDate) -> Unit,
     onSubmitClick: () -> Unit,
+    onSelectExistingPlayer: (PlayerProfile) -> Unit,
+    onDeletePlayer: (PlayerProfile) -> Unit,
     onResultDialogDismiss: () -> Unit,
     onStartClick: () -> Unit
 ) {
-    var courseMenuExpanded by remember { mutableStateOf(false) }
-
-    var nameTouched by remember { mutableStateOf(false) }
-    var submitAttempted by remember { mutableStateOf(false) }
-
-    val today = remember { LocalDate.now() }
-
-    val isNameValid = state.fullName.isNotBlank()
-    val isBirthDateValid = !state.birthDate.isAfter(today)
-    val isFormValid = isNameValid && isBirthDateValid
-
-    val showNameError = (nameTouched || submitAttempted) && !isNameValid
-    val showBirthDateError = submitAttempted && !isBirthDateValid
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -61,13 +51,111 @@ fun RegistrationContent(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-
         Text(
-            text = "Регистрация игрока",
+            text = "Профиль игрока",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )
 
+        state.activePlayer?.let { active ->
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Текущий игрок: ${active.fullName}",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            SegmentedButton(
+                selected = state.mode == RegistrationMode.CREATE_NEW,
+                onClick = { onModeChange(RegistrationMode.CREATE_NEW) },
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+            ) {
+                Text("Новый игрок")
+            }
+            SegmentedButton(
+                selected = state.mode == RegistrationMode.SELECT_EXISTING,
+                onClick = { onModeChange(RegistrationMode.SELECT_EXISTING) },
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+            ) {
+                Text("Выбрать (${state.savedPlayers.size})")
+            }
+        }
+
+        if (state.mode == RegistrationMode.CREATE_NEW) {
+            CreatePlayerForm(
+                state = state,
+                onNameChange = onNameChange,
+                onGenderChange = onGenderChange,
+                onCourseChange = onCourseChange,
+                onDateChange = onDateChange,
+                onSubmitClick = onSubmitClick
+            )
+        } else {
+            ExistingPlayersList(
+                players = state.savedPlayers,
+                activePlayerId = state.activePlayer?.id,
+                onSelectPlayer = onSelectExistingPlayer,
+                onDeletePlayer = onDeletePlayer
+            )
+        }
+    }
+
+    if (state.isResultDialogVisible && state.submittedProfile != null) {
+        ResultDialog(
+            profile = state.submittedProfile,
+            isNewRegistration = state.mode == RegistrationMode.CREATE_NEW,
+            onDismiss = onResultDialogDismiss,
+            onStartClick = onStartClick
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CreatePlayerForm(
+    state: RegistrationState,
+    onNameChange: (String) -> Unit,
+    onGenderChange: (Gender) -> Unit,
+    onCourseChange: (Course) -> Unit,
+    onDateChange: (LocalDate) -> Unit,
+    onSubmitClick: () -> Unit
+) {
+    var courseMenuExpanded by remember { mutableStateOf(false) }
+    var nameTouched by remember { mutableStateOf(false) }
+    var submitAttempted by remember { mutableStateOf(false) }
+
+    val today = remember { LocalDate.now() }
+    val isNameValid = state.fullName.isNotBlank()
+    val isBirthDateValid = !state.birthDate.isAfter(today)
+    val isFormValid = isNameValid && isBirthDateValid
+
+    val showNameError = (nameTouched || submitAttempted) && !isNameValid
+    val showBirthDateError = submitAttempted && !isBirthDateValid
+
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         OutlinedTextField(
             value = state.fullName,
             onValueChange = {
@@ -112,7 +200,7 @@ fun RegistrationContent(
                 label = { Text("Курс *") },
                 trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
                 modifier = Modifier
-                    .menuAnchor()
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                     .fillMaxWidth()
             )
             ExposedDropdownMenu(
@@ -129,19 +217,6 @@ fun RegistrationContent(
                     )
                 }
             }
-        }
-
-        Column {
-            Text(
-                text = "Уровень сложности: ${state.difficulty} *",
-                style = MaterialTheme.typography.labelLarge
-            )
-            Slider(
-                value = state.difficulty.toFloat(),
-                onValueChange = { onDifficultyChange(it.toInt()) },
-                valueRange = 1f..10f,
-                steps = 8
-            )
         }
 
         Column {
@@ -193,19 +268,88 @@ fun RegistrationContent(
             )
         }
     }
+}
 
-    if (state.isResultDialogVisible && state.submittedProfile != null) {
-        ResultDialog(
-            profile = state.submittedProfile,
-            onDismiss = onResultDialogDismiss,
-            onStartClick = onStartClick
-        )
+@Composable
+private fun ExistingPlayersList(
+    players: List<PlayerProfile>,
+    activePlayerId: Long?,
+    onSelectPlayer: (PlayerProfile) -> Unit,
+    onDeletePlayer: (PlayerProfile) -> Unit
+) {
+    if (players.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 48.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "Нет сохраненных профилей.\nЗарегистрируйте первого игрока!",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        return
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        players.forEach { player ->
+            val isSelected = player.id == activePlayerId
+            OutlinedCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onSelectPlayer(player) },
+                colors = CardDefaults.outlinedCardColors(
+                    containerColor = if (isSelected) {
+                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    }
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Image(
+                        painter = painterResource(id = zodiacIconRes(player.zodiacSign)),
+                        contentDescription = player.zodiacSign.title,
+                        modifier = Modifier.size(48.dp)
+                    )
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = player.fullName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "${player.gender.title} • ${player.course.title}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
+                    IconButton(onClick = { onDeletePlayer(player) }) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Удалить профиль",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
 @Composable
 private fun ResultDialog(
     profile: PlayerProfile,
+    isNewRegistration: Boolean,
     onDismiss: () -> Unit,
     onStartClick: () -> Unit
 ) {
@@ -230,9 +374,8 @@ private fun ResultDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-
                 Text(
-                    text = "Регистрация завершена",
+                    text = if (isNewRegistration) "Регистрация завершена" else "Профиль выбран",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -251,7 +394,6 @@ private fun ResultDialog(
                         ResultRow(label = "Игрок", value = profile.fullName)
                         ResultRow(label = "Пол", value = profile.gender.title)
                         ResultRow(label = "Курс", value = profile.course.title)
-                        ResultRow(label = "Сложность", value = profile.difficulty.toString())
                         ResultRow(label = "Дата рождения", value = profile.birthDate.toString())
                         ResultRow(label = "Знак зодиака", value = profile.zodiacSign.title)
                     }

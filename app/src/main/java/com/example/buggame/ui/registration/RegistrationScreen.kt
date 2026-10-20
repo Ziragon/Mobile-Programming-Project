@@ -14,17 +14,18 @@ fun RegistrationScreen(
 
     RegistrationContent(
         state = state,
+        onModeChange = viewModel::onModeChanged,
         onNameChange = viewModel::onFullNameChanged,
         onGenderChange = viewModel::onGenderChanged,
         onCourseChange = viewModel::onCourseChanged,
-        onDifficultyChange = viewModel::onDifficultyChanged,
         onDateChange = viewModel::onBirthDateChanged,
         onSubmitClick = viewModel::onSubmitClicked,
+        onSelectExistingPlayer = viewModel::onExistingPlayerSelected,
+        onDeletePlayer = viewModel::onDeletePlayerClicked,
         onResultDialogDismiss = viewModel::onResultDialogDismissed,
         onStartClick = {
             viewModel.onResultDialogDismissed()
             onRegistrationComplete()
         }
-
     )
 }
