@@ -23,7 +23,7 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
-    fun onBonusIntervalChanged(seconds: Int) {
+    fun onBonusIntervalChanged(seconds: Float) {
         _uiState.update {
             it.copy(settings = it.settings.copy(bonusIntervalSeconds = seconds))
         }

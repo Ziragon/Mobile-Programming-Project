@@ -3,6 +3,7 @@ package com.example.buggame.di
 import androidx.room.Room
 import com.example.buggame.data.local.AppDatabase
 import com.example.buggame.data.repository.PlayerRepository
+import com.example.buggame.data.repository.ScoreRepository
 import com.example.buggame.ui.authors.AuthorsViewModel
 import com.example.buggame.ui.game.GameViewModel
 import com.example.buggame.ui.registration.RegistrationViewModel
@@ -23,7 +24,10 @@ val appModule = module {
     }
 
     single { get<AppDatabase>().playerDao() }
+    single { get<AppDatabase>().scoreDao() }
+
     singleOf(::PlayerRepository)
+    singleOf(::ScoreRepository)
 
     viewModelOf(::AuthorsViewModel)
     viewModelOf(::GameViewModel)

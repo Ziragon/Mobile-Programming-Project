@@ -180,12 +180,11 @@ fun GameScreen(
     if (state.isRoundOver) {
         RoundOverDialog(
             score = state.score,
-            onDismiss = viewModel::onRoundOverDialogDismissed,
-            onPlayAgain = {
-                viewModel.onRoundOverDialogDismissed()
-                viewModel.onResetClicked()
-                viewModel.onStartClicked()
-            }
+            playerName = state.activePlayerName,
+            difficultyName = settingsState.settings.difficultyName,
+            durationSeconds = settingsState.settings.roundDurationSeconds,
+            onSaveScore = viewModel::onSaveScoreClicked,
+            onReset = viewModel::onResetClicked
         )
     }
 }
@@ -395,26 +394,63 @@ private fun HudCard(label: String, value: String) {
 @Composable
 private fun RoundOverDialog(
     score: Int,
-    onDismiss: () -> Unit,
-    onPlayAgain: () -> Unit
+    playerName: String,
+    difficultyName: String,
+    durationSeconds: Int,
+    onSaveScore: () -> Unit,
+    onReset: () -> Unit
 ) {
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(shape = MaterialTheme.shapes.extraLarge) {
+    Dialog(onDismissRequest = onReset) {
+        Surface(
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surfaceVariant
+        ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
                     text = "Раунд окончен",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
+
                 Text(
-                    text = "Ваш результат: $score очков",
-                    style = MaterialTheme.typography.bodyLarge
+                    text = "Игрок: $playerName",
+                    style = MaterialTheme.typography.bodyMedium
                 )
-                Button(onClick = onPlayAgain) { Text("Играть снова") }
+
+                Text(
+                    text = "$score очков",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Text(
+                    text = "Сложность: $difficultyName • $durationSeconds сек",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = onSaveScore,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Сохранить результат")
+                }
+
+                OutlinedButton(
+                    onClick = onReset,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Сброс")
+                }
             }
         }
     }

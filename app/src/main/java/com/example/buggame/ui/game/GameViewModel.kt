@@ -5,30 +5,32 @@ import androidx.lifecycle.viewModelScope
 import com.example.buggame.data.model.GameSettings
 import com.example.buggame.data.model.InsectSpawn
 import com.example.buggame.data.model.InsectType
+import com.example.buggame.data.model.ScoreRecord
 import com.example.buggame.data.model.TiltBonusSpawn
+import com.example.buggame.data.model.getDifficultyName
+import com.example.buggame.data.repository.PlayerRepository
+import com.example.buggame.data.repository.ScoreRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.random.Random
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlin.time.Duration.Companion.milliseconds
 
-class GameViewModel : ViewModel() {
+class GameViewModel(
+    private val playerRepository: PlayerRepository,
+    private val scoreRepository: ScoreRepository
+) : ViewModel() {
 
     private val _tiltBonusActivatedEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val tiltBonusActivatedEvent: SharedFlow<Unit> = _tiltBonusActivatedEvent.asSharedFlow()
+
     private val _uiState = MutableStateFlow(GameUiState())
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
     private var timerJob: Job? = null
     private var spawnJob: Job? = null
     private var nextInsectId = 0L
-
     private var settings: GameSettings = GameSettings()
 
     private companion object {
@@ -38,13 +40,37 @@ class GameViewModel : ViewModel() {
         const val TILT_MODE_DURATION_SECONDS = 10L
     }
 
+    init {
+        playerRepository.currentPlayer
+            .onEach { player ->
+                _uiState.update { it.copy(activePlayerName = player?.fullName?.ifBlank { "Игрок" } ?: "Игрок") }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    fun onSaveScoreClicked() {
+        val current = _uiState.value
+        val record = ScoreRecord(
+            playerName = current.activePlayerName,
+            score = current.score,
+            difficultyLevel = settings.gameSpeed.toInt(),
+            difficultyName = getDifficultyName(settings.gameSpeed),
+            durationSeconds = settings.roundDurationSeconds
+        )
+
+        viewModelScope.launch {
+            scoreRepository.saveScore(record)
+            onResetClicked()
+        }
+    }
+
     private var bonusSpawnJob: Job? = null
 
     private fun startBonusSpawning() {
         bonusSpawnJob?.cancel()
         bonusSpawnJob = viewModelScope.launch {
             while (_uiState.value.isRunning) {
-                delay((settings.bonusIntervalSeconds * 1000L).milliseconds)
+                delay((settings.bonusIntervalSeconds * 1000L).toLong().milliseconds)
 
                 val current = _uiState.value
                 if (current.isRunning && current.insects.size < settings.maxBugsOnScreen) {
@@ -68,9 +94,7 @@ class GameViewModel : ViewModel() {
         tiltBonusSpawnJob?.cancel()
         tiltBonusSpawnJob = viewModelScope.launch {
             delay((TILT_BONUS_SPAWN_INTERVAL_SECONDS * 1000L).milliseconds)
-
-            val current = _uiState.value
-            if (current.isRunning) {
+            if (_uiState.value.isRunning) {
                 spawnTiltBonus()
             }
         }
@@ -87,7 +111,6 @@ class GameViewModel : ViewModel() {
         tiltBonusLifetimeJob?.cancel()
         tiltBonusLifetimeJob = viewModelScope.launch {
             delay((TILT_BONUS_LIFETIME_SECONDS * 1000L).milliseconds)
-
             val current = _uiState.value
             if (current.tiltBonus?.id == bonus.id) {
                 _uiState.value = current.copy(tiltBonus = null)
@@ -120,6 +143,7 @@ class GameViewModel : ViewModel() {
         restartTiltModeTimer()
         _tiltBonusActivatedEvent.tryEmit(Unit)
     }
+
     private fun restartTiltModeTimer() {
         tiltModeJob?.cancel()
         tiltModeJob = viewModelScope.launch {
@@ -147,7 +171,8 @@ class GameViewModel : ViewModel() {
             GameUiState(
                 isRunning = true,
                 isMidRound = true,
-                timeLeftSeconds = settings.roundDurationSeconds
+                timeLeftSeconds = settings.roundDurationSeconds,
+                activePlayerName = current.activePlayerName
             )
         }
         startTimer()
@@ -179,13 +204,9 @@ class GameViewModel : ViewModel() {
         tiltBonusSpawnJob?.cancel()
         tiltBonusLifetimeJob?.cancel()
         tiltModeJob?.cancel()
-        _uiState.value = GameUiState(timeLeftSeconds = settings.roundDurationSeconds)
-    }
-
-    fun onRoundOverDialogDismissed() {
-        _uiState.value = _uiState.value.copy(
-            isRoundOver = false,
-            timeLeftSeconds = settings.roundDurationSeconds
+        _uiState.value = GameUiState(
+            timeLeftSeconds = settings.roundDurationSeconds,
+            activePlayerName = _uiState.value.activePlayerName
         )
     }
 

@@ -7,16 +7,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
-import androidx.compose.ui.tooling.preview.Preview
 import com.example.buggame.R
-import com.example.buggame.data.model.GameSettings
+import com.example.buggame.data.model.getDifficultyName
+import kotlin.math.roundToInt
 
 @Composable
 fun SettingsContent(
     state: SettingsState,
     onGameSpeedChange: (Float) -> Unit,
     onMaxBugsChange: (Int) -> Unit,
-    onBonusIntervalChange: (Int) -> Unit,
+    onBonusIntervalChange: (Float) -> Unit,
     onRoundDurationChange: (Int) -> Unit
 ) {
     Column(
@@ -27,12 +27,12 @@ fun SettingsContent(
         verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.section_spacing))
     ) {
         SettingsSliderFloat(
-            label = "Скорость игры",
+            label = "Сложность игры",
             value = state.settings.gameSpeed,
-            valueText = "×${"%.1f".format(state.settings.gameSpeed)}",
-            range = 0.5f..3.0f,
-            steps = 24,
-            onValueChange = onGameSpeedChange
+            valueText = "${getDifficultyName(state.settings.gameSpeed)} (${state.settings.gameSpeed.toInt()})",
+            range = 1f..5f,
+            steps = 3,
+            onValueChange = { onGameSpeedChange(it.roundToInt().toFloat()) }
         )
 
         HorizontalDivider()
@@ -40,17 +40,22 @@ fun SettingsContent(
         SettingsSliderInt(
             label = "Максимум тараканов на экране",
             value = state.settings.maxBugsOnScreen,
-            range = 1..30,
+            range = 5..15,
             onValueChange = onMaxBugsChange
         )
 
         HorizontalDivider()
 
-        SettingsSliderInt(
-            label = "Интервал появления бонусов (сек)",
+        SettingsSliderFloat(
+            label = "Интервал появления бонусов",
             value = state.settings.bonusIntervalSeconds,
-            range = 5..60,
-            onValueChange = onBonusIntervalChange
+            valueText = "${"%.1f".format(state.settings.bonusIntervalSeconds)} сек",
+            range = 5f..10f,
+            steps = 9,
+            onValueChange = { raw ->
+                val rounded = (raw * 2).roundToInt() / 2f
+                onBonusIntervalChange(rounded)
+            }
         )
 
         HorizontalDivider()
@@ -58,7 +63,7 @@ fun SettingsContent(
         SettingsSliderInt(
             label = "Длительность раунда (сек)",
             value = state.settings.roundDurationSeconds,
-            range = 30..300,
+            range = 10..60,
             onValueChange = onRoundDurationChange
         )
     }
@@ -106,16 +111,4 @@ private fun SettingsSliderInt(
             steps = (range.last - range.first - 1).coerceAtLeast(0)
         )
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun SettingsContentPreview() {
-    SettingsContent(
-        state = SettingsState(settings = GameSettings()),
-        onGameSpeedChange = {},
-        onMaxBugsChange = {},
-        onBonusIntervalChange = {},
-        onRoundDurationChange = {}
-    )
 }

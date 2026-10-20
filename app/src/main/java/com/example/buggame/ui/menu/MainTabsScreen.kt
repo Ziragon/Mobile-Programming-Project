@@ -14,6 +14,7 @@ import com.example.buggame.R
 import com.example.buggame.ui.authors.AuthorsScreen
 import com.example.buggame.ui.game.GameScreen
 import com.example.buggame.ui.game.GameViewModel
+import com.example.buggame.ui.leaderboard.LeaderboardScreen
 import com.example.buggame.ui.registration.RegistrationScreen
 import com.example.buggame.ui.rules.RulesScreen
 import com.example.buggame.ui.settings.SettingsScreen
@@ -24,6 +25,7 @@ enum class MainTab(val title: String, @DrawableRes val iconRes: Int?) {
     REGISTRATION("Регистрация", R.drawable.registration_icon),
     SETTINGS("Настройки", R.drawable.settings_icon),
     GAME("Игра", null),
+    LEADERBOARD("Рекорды", null),
     RULES("Правила", R.drawable.rules_icon),
     AUTHORS("Авторы", R.drawable.authors_icon)
 }
@@ -94,6 +96,7 @@ fun MainTabsScreen() {
                 )
                 MainTab.SETTINGS -> SettingsScreen()
                 MainTab.GAME -> GameScreen(viewModel = gameViewModel)
+                MainTab.LEADERBOARD -> LeaderboardScreen()
                 MainTab.RULES -> RulesScreen()
                 MainTab.AUTHORS -> AuthorsScreen()
             }

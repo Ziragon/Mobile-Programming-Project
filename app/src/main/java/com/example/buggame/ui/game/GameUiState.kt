@@ -11,9 +11,10 @@ data class GameUiState(
     val isMidRound: Boolean = false,
     val insects: List<InsectSpawn> = emptyList(),
     val tiltBonus: TiltBonusSpawn? = null,
-    val isTiltModeActive: Boolean = false
+    val isTiltModeActive: Boolean = false,
+    val activePlayerName: String = "Игрок"
 ) {
     companion object {
-        const val DEFAULT_ROUND_DURATION_SECONDS = 60
+        const val DEFAULT_ROUND_DURATION_SECONDS = 30
     }
 }
