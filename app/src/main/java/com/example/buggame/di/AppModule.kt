@@ -6,6 +6,7 @@ import com.example.buggame.data.repository.PlayerRepository
 import com.example.buggame.data.repository.ScoreRepository
 import com.example.buggame.ui.authors.AuthorsViewModel
 import com.example.buggame.ui.game.GameViewModel
+import com.example.buggame.ui.leaderboard.LeaderboardViewModel
 import com.example.buggame.ui.registration.RegistrationViewModel
 import com.example.buggame.ui.rules.RulesViewModel
 import com.example.buggame.ui.settings.SettingsViewModel
@@ -34,4 +35,5 @@ val appModule = module {
     viewModelOf(::RegistrationViewModel)
     viewModelOf(::RulesViewModel)
     viewModelOf(::SettingsViewModel)
+    viewModelOf(::LeaderboardViewModel)
 }

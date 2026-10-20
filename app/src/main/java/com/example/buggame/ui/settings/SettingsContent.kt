@@ -29,10 +29,13 @@ fun SettingsContent(
         SettingsSliderFloat(
             label = "Сложность игры",
             value = state.settings.gameSpeed,
-            valueText = "${getDifficultyName(state.settings.gameSpeed)} (${state.settings.gameSpeed.toInt()})",
-            range = 1f..5f,
+            valueText = "${getDifficultyName(state.settings.gameSpeed)} (${"%.1f".format(state.settings.gameSpeed)})",
+            range = 1f..3f,
             steps = 3,
-            onValueChange = { onGameSpeedChange(it.roundToInt().toFloat()) }
+            onValueChange = { raw ->
+                val rounded = (raw * 2).roundToInt() / 2f
+                onGameSpeedChange(rounded)
+            }
         )
 
         HorizontalDivider()

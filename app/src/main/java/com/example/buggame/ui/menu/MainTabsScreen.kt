@@ -8,6 +8,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.buggame.R
@@ -37,6 +39,14 @@ fun MainTabsScreen() {
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val coroutineScope = rememberCoroutineScope()
 
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress) {
+        focusManager.clearFocus()
+        keyboardController?.hide()
+    }
+
     val gameViewModel: GameViewModel = koinViewModel()
     val gameState by gameViewModel.uiState.collectAsState()
 
@@ -54,6 +64,9 @@ fun MainTabsScreen() {
                         Tab(
                             selected = pagerState.currentPage == index,
                             onClick = {
+                                focusManager.clearFocus()
+                                keyboardController?.hide()
+
                                 coroutineScope.launch {
                                     pagerState.animateScrollToPage(index)
                                 }
