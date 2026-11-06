@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+             android:id="@+id/widget_root"
+             android:layout_width="match_parent"
+             android:layout_height="match_parent"
+             android:background="@drawable/widget_ball"
+             android:padding="12dp">
+
+    <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="vertical">
+
+        <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Au"
+                android:textColor="#5D4300"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+        <TextView
+                android:id="@+id/widget_rate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="—"
+                android:textColor="#3B2A00"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+        <TextView
+                android:id="@+id/widget_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#5D4300"
+                android:textSize="10sp" />
+    </LinearLayout>
+</FrameLayout>

@@ -8,6 +8,8 @@ import com.example.buggame.data.model.InsectType
 import com.example.buggame.data.model.ScoreRecord
 import com.example.buggame.data.model.TiltBonusSpawn
 import com.example.buggame.data.model.getDifficultyName
+import com.example.buggame.data.model.BonusInsect
+import com.example.buggame.data.repository.GoldRateRepository
 import com.example.buggame.data.repository.PlayerRepository
 import com.example.buggame.data.repository.ScoreRepository
 import kotlinx.coroutines.Job
@@ -19,7 +21,8 @@ import kotlin.time.Duration.Companion.milliseconds
 
 class GameViewModel(
     private val playerRepository: PlayerRepository,
-    private val scoreRepository: ScoreRepository
+    private val scoreRepository: ScoreRepository,
+    private val goldRateRepository: GoldRateRepository
 ) : ViewModel() {
 
     private val _tiltBonusActivatedEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -38,6 +41,8 @@ class GameViewModel(
         const val TILT_BONUS_SPAWN_INTERVAL_SECONDS = 15L
         const val TILT_BONUS_LIFETIME_SECONDS = 6L
         const val TILT_MODE_DURATION_SECONDS = 10L
+
+        const val GOLD_BUG_SPAWN_INTERVAL_SECONDS = 20L
     }
 
     init {
@@ -46,6 +51,8 @@ class GameViewModel(
                 _uiState.update { it.copy(activePlayerName = player?.fullName?.ifBlank { "Игрок" } ?: "Игрок") }
             }
             .launchIn(viewModelScope)
+
+        viewModelScope.launch { goldRateRepository.refresh() }
     }
 
     fun onSaveScoreClicked() {
@@ -70,17 +77,20 @@ class GameViewModel(
         bonusSpawnJob?.cancel()
         bonusSpawnJob = viewModelScope.launch {
             while (_uiState.value.isRunning) {
-                delay((settings.bonusIntervalSeconds * 1000L).toLong().milliseconds)
+                delay((GOLD_BUG_SPAWN_INTERVAL_SECONDS * 1000L).milliseconds)
 
                 val current = _uiState.value
-                if (current.isRunning && current.insects.size < settings.maxBugsOnScreen) {
-                    val bonus = InsectSpawn(
-                        id = ++nextInsectId,
-                        type = InsectType.entries.random(),
-                        isBonus = true
-                    )
-                    _uiState.value = current.copy(insects = current.insects + bonus)
-                }
+                if (!current.isRunning) break
+
+                val points = goldRateRepository.rate.value?.bugPoints ?: BonusInsect.points
+
+                val goldenBug = InsectSpawn(
+                    id = ++nextInsectId,
+                    type = InsectType.entries.random(),
+                    isBonus = true,
+                    bonusPoints = points
+                )
+                _uiState.value = current.copy(insects = current.insects + goldenBug)
             }
         }
     }
@@ -164,6 +174,8 @@ class GameViewModel(
     fun onStartClicked() {
         val current = _uiState.value
         if (current.isRunning) return
+
+        viewModelScope.launch { goldRateRepository.refresh() }
 
         _uiState.value = if (current.isMidRound) {
             current.copy(isRunning = true)
