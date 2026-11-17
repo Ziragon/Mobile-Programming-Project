@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
+import com.example.buggame.adaptive.AdaptiveController
+import com.example.buggame.adaptive.AdaptiveParams
 
 class GameViewModel(
     private val playerRepository: PlayerRepository,
@@ -28,6 +30,9 @@ class GameViewModel(
     private val _tiltBonusActivatedEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val tiltBonusActivatedEvent: SharedFlow<Unit> = _tiltBonusActivatedEvent.asSharedFlow()
 
+    private val adaptive = AdaptiveController()
+    private val _adaptiveParams = MutableStateFlow(adaptive.params)
+    val adaptiveParams: StateFlow<AdaptiveParams> = _adaptiveParams.asStateFlow()
     private val _uiState = MutableStateFlow(GameUiState())
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
@@ -37,7 +42,6 @@ class GameViewModel(
     private var settings: GameSettings = GameSettings()
 
     private companion object {
-        const val MISS_PENALTY = 3
         const val TILT_BONUS_SPAWN_INTERVAL_SECONDS = 15L
         const val TILT_BONUS_LIFETIME_SECONDS = 6L
         const val TILT_MODE_DURATION_SECONDS = 10L
@@ -52,6 +56,12 @@ class GameViewModel(
             }
             .launchIn(viewModelScope)
 
+        playerRepository.currentPlayer
+            .map { it?.fullName }
+            .distinctUntilChanged()
+            .drop(1)
+            .onEach { onResetAdaptationClicked() }
+            .launchIn(viewModelScope)
         viewModelScope.launch { goldRateRepository.refresh() }
     }
 
@@ -175,6 +185,7 @@ class GameViewModel(
         val current = _uiState.value
         if (current.isRunning) return
 
+        if (!current.isMidRound) adaptive.startRound()
         viewModelScope.launch { goldRateRepository.refresh() }
 
         _uiState.value = if (current.isMidRound) {
@@ -210,6 +221,7 @@ class GameViewModel(
     }
 
     fun onResetClicked() {
+        adaptive.startRound()
         timerJob?.cancel()
         spawnJob?.cancel()
         bonusSpawnJob?.cancel()
@@ -227,6 +239,7 @@ class GameViewModel(
         if (!current.isRunning) return
         val insect = current.insects.find { it.id == insectId } ?: return
 
+        adaptive.onHit()
         _uiState.value = current.copy(
             insects = current.insects.filterNot { it.id == insectId },
             score = (current.score + insect.points).coerceAtLeast(0)
@@ -237,8 +250,9 @@ class GameViewModel(
         val current = _uiState.value
         if (!current.isRunning) return
 
+        adaptive.onMiss()
         _uiState.value = current.copy(
-            score = (current.score - MISS_PENALTY).coerceAtLeast(0)
+            score = (current.score - adaptive.params.missPenalty).coerceAtLeast(0)
         )
     }
 
@@ -264,6 +278,7 @@ class GameViewModel(
 
                 if (roundOver) {
                     spawnJob?.cancel()
+                    _adaptiveParams.value = adaptive.finishRound()
                     bonusSpawnJob?.cancel()
                     tiltBonusSpawnJob?.cancel()
                     tiltBonusLifetimeJob?.cancel()
@@ -300,4 +315,12 @@ class GameViewModel(
         tiltBonusLifetimeJob?.cancel()
         tiltModeJob?.cancel()
     }
+
+    fun onResetAdaptationClicked() {
+        val current = _uiState.value
+        if (current.isRunning || current.isMidRound) return
+        adaptive.reset()
+        _adaptiveParams.value = adaptive.params
+    }
+
 }

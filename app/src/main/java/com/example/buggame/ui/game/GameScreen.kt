@@ -61,6 +61,7 @@ fun GameScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val settingsState by settingsViewModel.uiState.collectAsState()
+    val adaptive by viewModel.adaptiveParams.collectAsState()
     val context = LocalContext.current
     val tiltOffset by rememberTiltOffset()
 
@@ -95,6 +96,7 @@ fun GameScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 HudCard(label = "Очки", value = state.score.toString())
+                HudCard(label = "Адаптация", value = formatLevel(adaptive.level))
                 HudCard(label = "Время", value = formatTime(state.timeLeftSeconds))
             }
 
@@ -124,7 +126,7 @@ fun GameScreen(
                             areaHeightPx = areaHeightPx,
                             insectSizeDp = insectSizeDp,
                             insectSizePx = insectSizePx,
-                            baseSpeedPxPerSec = settingsState.settings.insectSpeedPxPerSec,
+                            baseSpeedPxPerSec = settingsState.settings.insectSpeedPxPerSec * adaptive.speedMultiplier,
                             isRunning = state.isRunning,
                             isTiltModeActive = state.isTiltModeActive,
                             tiltOffset = tiltOffset,
@@ -461,3 +463,5 @@ private fun formatTime(totalSeconds: Int): String {
     val seconds = totalSeconds % 60
     return "%d:%02d".format(minutes, seconds)
 }
+
+private fun formatLevel(level: Int): String = if (level > 0) "+$level" else level.toString()
