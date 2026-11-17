@@ -46,6 +46,7 @@ import com.example.buggame.data.model.TiltBonusSpawn
 import com.example.buggame.sensor.TiltSensorManager
 import com.example.buggame.ui.settings.SettingsViewModel
 import kotlinx.coroutines.delay
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
@@ -96,7 +97,10 @@ fun GameScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 HudCard(label = "Очки", value = state.score.toString())
-                HudCard(label = "Адаптация", value = formatLevel(adaptive.level))
+                HudCard(
+                    label = "Адаптация",
+                    value = formatDifficulty(adaptive.difficulty.toDouble())
+                )
                 HudCard(label = "Время", value = formatTime(state.timeLeftSeconds))
             }
 
@@ -118,6 +122,9 @@ fun GameScreen(
                 val insectSizeDp = 40.dp
                 val insectSizePx = with(density) { insectSizeDp.toPx() }
 
+                val baseSpeed =
+                    settingsState.settings.insectSpeedPxPerSec * adaptive.speedMultiplier.toFloat()
+
                 state.insects.forEach { insect ->
                     key(insect.id) {
                         InsectView(
@@ -126,7 +133,7 @@ fun GameScreen(
                             areaHeightPx = areaHeightPx,
                             insectSizeDp = insectSizeDp,
                             insectSizePx = insectSizePx,
-                            baseSpeedPxPerSec = settingsState.settings.insectSpeedPxPerSec * adaptive.speedMultiplier,
+                            baseSpeedPxPerSec = baseSpeed,
                             isRunning = state.isRunning,
                             isTiltModeActive = state.isTiltModeActive,
                             tiltOffset = tiltOffset,
@@ -185,8 +192,10 @@ fun GameScreen(
             playerName = state.activePlayerName,
             difficultyName = settingsState.settings.difficultyName,
             durationSeconds = settingsState.settings.roundDurationSeconds,
+            adaptiveDifficulty = adaptive.difficulty.toDouble(),
             onSaveScore = viewModel::onSaveScoreClicked,
-            onReset = viewModel::onResetClicked
+            onReset = viewModel::onResetClicked,
+            onResetAdaptation = viewModel::onResetAdaptationClicked
         )
     }
 }
@@ -234,12 +243,12 @@ private fun InsectView(
 
     val isRunningState = rememberUpdatedState(isRunning)
     val tiltOffsetState = rememberUpdatedState(tiltOffset)
+    val speedState = rememberUpdatedState(effectiveSpeed)
 
     LaunchedEffect(insect.id, areaWidthPx, areaHeightPx, isTiltModeActive) {
         if (areaWidthPx <= insectSizePx || areaHeightPx <= insectSizePx) return@LaunchedEffect
 
         if (isTiltModeActive) {
-            val tiltSpeedPxPerSec = effectiveSpeed * 4f
             val frameDelayMs = 16L
             val dt = frameDelayMs / 1000f
 
@@ -249,6 +258,7 @@ private fun InsectView(
                     continue
                 }
 
+                val tiltSpeedPxPerSec = speedState.value * 4f
                 val tilt = tiltOffsetState.value
                 val dx = tilt.x * tiltSpeedPxPerSec * dt
                 val dy = tilt.y * tiltSpeedPxPerSec * dt
@@ -259,8 +269,7 @@ private fun InsectView(
                 position.snapTo(Offset(newX, newY))
                 delay(frameDelayMs.milliseconds)
             }
-        }
-        else {
+        } else {
             while (true) {
                 if (!isRunningState.value) {
                     delay(150.milliseconds)
@@ -272,7 +281,7 @@ private fun InsectView(
                     y = Random.nextFloat() * (areaHeightPx - insectSizePx)
                 )
                 val distance = (target - position.value).getDistance()
-                val durationMs = ((distance / effectiveSpeed) * 1000)
+                val durationMs = ((distance / speedState.value) * 1000)
                     .toInt()
                     .coerceIn(200, 4000)
 
@@ -399,8 +408,10 @@ private fun RoundOverDialog(
     playerName: String,
     difficultyName: String,
     durationSeconds: Int,
+    adaptiveDifficulty: Double,
     onSaveScore: () -> Unit,
-    onReset: () -> Unit
+    onReset: () -> Unit,
+    onResetAdaptation: () -> Unit
 ) {
     Dialog(onDismissRequest = onReset) {
         Surface(
@@ -438,6 +449,12 @@ private fun RoundOverDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
+                Text(
+                    text = "Адаптация к следующему раунду: ${formatDifficulty(adaptiveDifficulty)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Button(
@@ -453,6 +470,15 @@ private fun RoundOverDialog(
                 ) {
                     Text("Сброс")
                 }
+
+                if (abs(adaptiveDifficulty) >= 0.005) {
+                    TextButton(
+                        onClick = onResetAdaptation,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Сбросить адаптацию")
+                    }
+                }
             }
         }
     }
@@ -464,4 +490,5 @@ private fun formatTime(totalSeconds: Int): String {
     return "%d:%02d".format(minutes, seconds)
 }
 
-private fun formatLevel(level: Int): String = if (level > 0) "+$level" else level.toString()
+private fun formatDifficulty(difficulty: Double): String =
+    "%+d%%".format((difficulty * 100).roundToInt())

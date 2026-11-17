@@ -2,13 +2,16 @@ package com.example.buggame.ui.game
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.buggame.adaptive.AdaptiveController
+import com.example.buggame.adaptive.AdaptiveParams
+import com.example.buggame.adaptive.DdaConfig
+import com.example.buggame.data.model.BonusInsect
 import com.example.buggame.data.model.GameSettings
 import com.example.buggame.data.model.InsectSpawn
 import com.example.buggame.data.model.InsectType
 import com.example.buggame.data.model.ScoreRecord
 import com.example.buggame.data.model.TiltBonusSpawn
 import com.example.buggame.data.model.getDifficultyName
-import com.example.buggame.data.model.BonusInsect
 import com.example.buggame.data.repository.GoldRateRepository
 import com.example.buggame.data.repository.PlayerRepository
 import com.example.buggame.data.repository.ScoreRepository
@@ -18,28 +21,12 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
-import com.example.buggame.adaptive.AdaptiveController
-import com.example.buggame.adaptive.AdaptiveParams
 
 class GameViewModel(
     private val playerRepository: PlayerRepository,
     private val scoreRepository: ScoreRepository,
     private val goldRateRepository: GoldRateRepository
 ) : ViewModel() {
-
-    private val _tiltBonusActivatedEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    val tiltBonusActivatedEvent: SharedFlow<Unit> = _tiltBonusActivatedEvent.asSharedFlow()
-
-    private val adaptive = AdaptiveController()
-    private val _adaptiveParams = MutableStateFlow(adaptive.params)
-    val adaptiveParams: StateFlow<AdaptiveParams> = _adaptiveParams.asStateFlow()
-    private val _uiState = MutableStateFlow(GameUiState())
-    val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
-
-    private var timerJob: Job? = null
-    private var spawnJob: Job? = null
-    private var nextInsectId = 0L
-    private var settings: GameSettings = GameSettings()
 
     private companion object {
         const val TILT_BONUS_SPAWN_INTERVAL_SECONDS = 15L
@@ -48,6 +35,33 @@ class GameViewModel(
 
         const val GOLD_BUG_SPAWN_INTERVAL_SECONDS = 20L
     }
+
+    private val _tiltBonusActivatedEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val tiltBonusActivatedEvent: SharedFlow<Unit> = _tiltBonusActivatedEvent.asSharedFlow()
+
+    private val _uiState = MutableStateFlow(GameUiState())
+    val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
+
+    private val adaptive = AdaptiveController()
+    private val _adaptiveParams = MutableStateFlow(adaptive.params)
+    val adaptiveParams: StateFlow<AdaptiveParams> = _adaptiveParams.asStateFlow()
+
+    private val spawnTimes = HashMap<Long, Long>()
+    private var pausedAt = 0L
+    private var adaptationJob: Job? = null
+
+    private fun nowMs(): Long = System.nanoTime() / 1_000_000L
+
+    private var timerJob: Job? = null
+    private var spawnJob: Job? = null
+    private var bonusSpawnJob: Job? = null
+    private var nextInsectId = 0L
+    private var settings: GameSettings = GameSettings()
+
+    private var tiltBonusSpawnJob: Job? = null
+    private var tiltBonusLifetimeJob: Job? = null
+    private var tiltModeJob: Job? = null
+    private var nextTiltBonusId = 0L
 
     init {
         playerRepository.currentPlayer
@@ -62,6 +76,7 @@ class GameViewModel(
             .drop(1)
             .onEach { onResetAdaptationClicked() }
             .launchIn(viewModelScope)
+
         viewModelScope.launch { goldRateRepository.refresh() }
     }
 
@@ -81,8 +96,6 @@ class GameViewModel(
         }
     }
 
-    private var bonusSpawnJob: Job? = null
-
     private fun startBonusSpawning() {
         bonusSpawnJob?.cancel()
         bonusSpawnJob = viewModelScope.launch {
@@ -100,15 +113,11 @@ class GameViewModel(
                     isBonus = true,
                     bonusPoints = points
                 )
+                spawnTimes[goldenBug.id] = nowMs()
                 _uiState.value = current.copy(insects = current.insects + goldenBug)
             }
         }
     }
-
-    private var tiltBonusSpawnJob: Job? = null
-    private var tiltBonusLifetimeJob: Job? = null
-    private var tiltModeJob: Job? = null
-    private var nextTiltBonusId = 0L
 
     private fun scheduleNextTiltBonusSpawn() {
         tiltBonusSpawnJob?.cancel()
@@ -185,7 +194,18 @@ class GameViewModel(
         val current = _uiState.value
         if (current.isRunning) return
 
-        if (!current.isMidRound) adaptive.startRound()
+        if (current.isMidRound) {
+            if (pausedAt != 0L) {
+                val pauseLength = nowMs() - pausedAt
+                spawnTimes.replaceAll { _, spawnedAt -> spawnedAt + pauseLength }
+                pausedAt = 0L
+            }
+        } else {
+            adaptive.startRound()
+            spawnTimes.clear()
+            pausedAt = 0L
+        }
+
         viewModelScope.launch { goldRateRepository.refresh() }
 
         _uiState.value = if (current.isMidRound) {
@@ -201,6 +221,7 @@ class GameViewModel(
         startTimer()
         startSpawning()
         startBonusSpawning()
+        startAdaptation()
 
         val resumed = _uiState.value
         when {
@@ -211,9 +232,11 @@ class GameViewModel(
     }
 
     fun onPauseClicked() {
+        pausedAt = nowMs()
         timerJob?.cancel()
         spawnJob?.cancel()
         bonusSpawnJob?.cancel()
+        adaptationJob?.cancel()
         tiltBonusSpawnJob?.cancel()
         tiltBonusLifetimeJob?.cancel()
         tiltModeJob?.cancel()
@@ -222,9 +245,13 @@ class GameViewModel(
 
     fun onResetClicked() {
         adaptive.startRound()
+        spawnTimes.clear()
+        pausedAt = 0L
+
         timerJob?.cancel()
         spawnJob?.cancel()
         bonusSpawnJob?.cancel()
+        adaptationJob?.cancel()
         tiltBonusSpawnJob?.cancel()
         tiltBonusLifetimeJob?.cancel()
         tiltModeJob?.cancel()
@@ -239,7 +266,9 @@ class GameViewModel(
         if (!current.isRunning) return
         val insect = current.insects.find { it.id == insectId } ?: return
 
-        adaptive.onHit()
+        val spawnedAt = spawnTimes.remove(insectId)
+        adaptive.onHit(spawnedAt?.let { nowMs() - it })
+
         _uiState.value = current.copy(
             insects = current.insects.filterNot { it.id == insectId },
             score = (current.score + insect.points).coerceAtLeast(0)
@@ -250,9 +279,12 @@ class GameViewModel(
         val current = _uiState.value
         if (!current.isRunning) return
 
+        val penalty = adaptive.params.missPenalty
         adaptive.onMiss()
+        _adaptiveParams.value = adaptive.params
+
         _uiState.value = current.copy(
-            score = (current.score - adaptive.params.missPenalty).coerceAtLeast(0)
+            score = (current.score - penalty).coerceAtLeast(0)
         )
     }
 
@@ -278,11 +310,14 @@ class GameViewModel(
 
                 if (roundOver) {
                     spawnJob?.cancel()
-                    _adaptiveParams.value = adaptive.finishRound()
                     bonusSpawnJob?.cancel()
+                    adaptationJob?.cancel()
                     tiltBonusSpawnJob?.cancel()
                     tiltBonusLifetimeJob?.cancel()
                     tiltModeJob?.cancel()
+                    spawnTimes.clear()
+                    pausedAt = 0L
+                    _adaptiveParams.value = adaptive.finishRound()
                 }
             }
         }
@@ -292,28 +327,36 @@ class GameViewModel(
         spawnJob?.cancel()
         spawnJob = viewModelScope.launch {
             while (_uiState.value.isRunning) {
-                delay(settings.insectSpawnIntervalMillis.milliseconds)
+                val params = adaptive.params
+                val intervalMs = params.adjustSpawnInterval(settings.insectSpawnIntervalMillis)
+                delay(intervalMs.milliseconds)
 
                 val current = _uiState.value
-                if (current.isRunning && current.insects.size < settings.maxBugsOnScreen) {
+                val maxBugs = adaptive.params.adjustMaxBugs(settings.maxBugsOnScreen)
+                if (current.isRunning && current.insects.size < maxBugs) {
                     val newInsect = InsectSpawn(
                         id = ++nextInsectId,
                         type = InsectType.entries.random()
                     )
+                    spawnTimes[newInsect.id] = nowMs()
                     _uiState.value = current.copy(insects = current.insects + newInsect)
                 }
             }
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        timerJob?.cancel()
-        spawnJob?.cancel()
-        bonusSpawnJob?.cancel()
-        tiltBonusSpawnJob?.cancel()
-        tiltBonusLifetimeJob?.cancel()
-        tiltModeJob?.cancel()
+    private fun startAdaptation() {
+        adaptationJob?.cancel()
+        adaptationJob = viewModelScope.launch {
+            while (_uiState.value.isRunning) {
+                delay(DdaConfig.TICK_MS.milliseconds)
+                val s = _uiState.value
+                if (!s.isRunning) break
+
+                val maxBugs = adaptive.params.adjustMaxBugs(settings.maxBugsOnScreen)
+                _adaptiveParams.value = adaptive.tick(s.insects.size, maxBugs)
+            }
+        }
     }
 
     fun onResetAdaptationClicked() {
@@ -323,4 +366,14 @@ class GameViewModel(
         _adaptiveParams.value = adaptive.params
     }
 
+    override fun onCleared() {
+        super.onCleared()
+        timerJob?.cancel()
+        spawnJob?.cancel()
+        bonusSpawnJob?.cancel()
+        adaptationJob?.cancel()
+        tiltBonusSpawnJob?.cancel()
+        tiltBonusLifetimeJob?.cancel()
+        tiltModeJob?.cancel()
+    }
 }
