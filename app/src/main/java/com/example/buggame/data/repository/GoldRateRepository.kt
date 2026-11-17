@@ -22,11 +22,6 @@ class GoldRateRepository(
     private val _rate = MutableStateFlow(loadCached())
     val rate: StateFlow<GoldRate?> = _rate.asStateFlow()
 
-    /**
-     * Запрашиваем окно в 10 дней и берём запись с самой поздней датой:
-     * если ЦБ ещё не выпустил курс на сегодня, получим предыдущий.
-     * При ошибке остаётся значение из кэша. После любой попытки обновляем виджеты.
-     */
     suspend fun refresh(): GoldRate? = withContext(Dispatchers.IO) {
         try {
             val now = System.currentTimeMillis()
