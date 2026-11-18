@@ -28,7 +28,6 @@ class AdaptiveParamsTest {
         assertEquals(7, maxParams.maxBugsBonus)
         assertEquals(7, maxParams.missPenalty)
 
-        // Проверка минимума и ограничения при выходе за нижнюю границу (< -1.0)
         val minParams = AdaptiveParams.forDifficulty(-2.0)
         assertEquals(-1.0, minParams.difficulty, 0.0001)
         assertEquals(-3, minParams.level)
